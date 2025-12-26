@@ -136,21 +136,64 @@ export async function POST(request: Request) {
 
     console.log("✅ All products verified and active");
 
-    // 6. التحقق من المخزون
+    // 6. التحقق من المخزون (مع دعم الـ variants)
     console.log("\n📊 Checking stock...");
     for (const item of items) {
       const dbProduct = dbProducts.find((p) => p.id === item.product.id);
       if (!dbProduct) continue;
 
-      if (item.quantity > dbProduct.stock_estimate) {
-        console.error("❌ Insufficient stock for:", dbProduct.name);
-        return NextResponse.json(
-          {
-            error: "كمية غير متوفرة",
-            message: `${dbProduct.name} - المتوفر: ${dbProduct.stock_estimate}`,
-          },
-          { status: 400 }
-        );
+      // ✅ إذا كان المنتج له variant، تحقق من مخزون الـ variant
+      if (item.variantId) {
+        const { data: variant, error: variantError } = await supabase
+          .from("product_variants")
+          .select("id, variant_name, stock_estimate, is_active")
+          .eq("id", item.variantId)
+          .single();
+
+        if (variantError || !variant) {
+          console.error("❌ Variant not found:", item.variantId);
+          return NextResponse.json(
+            {
+              error: "نكهة المنتج غير متوفرة",
+              message: `${dbProduct.name} - النكهة المطلوبة غير موجودة`,
+            },
+            { status: 400 }
+          );
+        }
+
+        if (!variant.is_active) {
+          console.error("❌ Variant inactive:", variant.variant_name);
+          return NextResponse.json(
+            {
+              error: "نكهة المنتج غير متوفرة",
+              message: `${dbProduct.name} - ${variant.variant_name} غير متوفرة حالياً`,
+            },
+            { status: 400 }
+          );
+        }
+
+        if (item.quantity > (variant.stock_estimate || 0)) {
+          console.error("❌ Insufficient variant stock:", variant.variant_name);
+          return NextResponse.json(
+            {
+              error: "كمية غير متوفرة",
+              message: `${dbProduct.name} - ${variant.variant_name} - المتوفر: ${variant.stock_estimate || 0}`,
+            },
+            { status: 400 }
+          );
+        }
+      } else {
+        // ✅ منتج عادي بدون variant
+        if (item.quantity > dbProduct.stock_estimate) {
+          console.error("❌ Insufficient stock for:", dbProduct.name);
+          return NextResponse.json(
+            {
+              error: "كمية غير متوفرة",
+              message: `${dbProduct.name} - المتوفر: ${dbProduct.stock_estimate}`,
+            },
+            { status: 400 }
+          );
+        }
       }
     }
 
@@ -325,23 +368,11 @@ export async function POST(request: Request) {
       const dbProduct = dbProducts.find((p) => p.id === item.product.id);
       if (!dbProduct) continue;
 
-      const newStock = Math.max(0, dbProduct.stock_estimate - item.quantity);
-      const { error: stockError } = await supabase
-        .from("products")
-        .update({ stock_estimate: newStock })
-        .eq("id", item.product.id);
-
-      if (stockError) {
-        console.warn("⚠️ Stock update warning:", stockError.message);
-      } else {
-        console.log(`✅ Deducted ${item.quantity} from product ${dbProduct.name}`);
-      }
-
-      // تحديث مخزون الـ variant إذا وُجد
+      // ✅ تحديث مخزون الـ variant إذا وُجد
       if (item.variantId) {
         const { data: variant } = await supabase
           .from("product_variants")
-          .select("stock_estimate")
+          .select("stock_estimate, variant_name")
           .eq("id", item.variantId)
           .single();
 
@@ -354,6 +385,21 @@ export async function POST(request: Request) {
             .from("product_variants")
             .update({ stock_estimate: newVariantStock })
             .eq("id", item.variantId);
+          
+          console.log(`✅ Deducted ${item.quantity} from variant ${variant.variant_name}`);
+        }
+      } else {
+        // ✅ تحديث مخزون المنتج العادي
+        const newStock = Math.max(0, dbProduct.stock_estimate - item.quantity);
+        const { error: stockError } = await supabase
+          .from("products")
+          .update({ stock_estimate: newStock })
+          .eq("id", item.product.id);
+
+        if (stockError) {
+          console.warn("⚠️ Stock update warning:", stockError.message);
+        } else {
+          console.log(`✅ Deducted ${item.quantity} from product ${dbProduct.name}`);
         }
       }
     }
