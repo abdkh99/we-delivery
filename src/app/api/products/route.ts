@@ -25,6 +25,7 @@ export async function GET() {
       `
       )
       .eq("is_active", true)
+      .gt("stock_estimate", 0)  // إخفاء المنتجات اللي مخزونها 0 أو أقل
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -35,18 +36,34 @@ export async function GET() {
       );
     }
 
-    const sanitizedProducts = (products || []).map((product) => ({
-      ...product,
-      product_variants: (product.product_variants || []).filter(
-        (variant) => variant?.is_active !== false
-      ),
-    }));
+    // فلترة المنتجات والـ variants حسب المخزون
+    const sanitizedProducts = (products || []).map((product) => {
+      // فلترة الـ variants النشطة واللي عندها مخزون
+      const activeVariants = (product.product_variants || []).filter(
+        (variant) => 
+          variant?.is_active !== false && 
+          (variant?.stock_estimate ?? 0) > 0
+      );
+
+      return {
+        ...product,
+        product_variants: activeVariants,
+      };
+    })
+    // إخفاء المنتجات اللي ما عندها variants متوفرة (إذا كانت master product)
+    .filter((product) => {
+      // إذا المنتج عنده variants
+      if (product.is_master_product && product.product_variants.length === 0) {
+        return false; // اخفي المنتج لأن كل الـ variants خلصت
+      }
+      return true;
+    });
 
     return NextResponse.json(
       { products: sanitizedProducts },
       {
         headers: {
-          "Cache-Control": "public, s-maxage=60, stale-while-revalidate=120",
+          "Cache-Control": "public, s-maxage=30, stale-while-revalidate=60",
         },
       }
     );
