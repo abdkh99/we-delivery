@@ -25,7 +25,6 @@ export async function GET() {
       `
       )
       .eq("is_active", true)
-      // ✅ إزالة .gt("stock_estimate", 0) هنا لأننا نريد عرض المنتجات التي لها variants متوفرة
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -50,7 +49,7 @@ export async function GET() {
         product_variants: activeVariants,
       };
     })
-    // ✅ تحسين المنطق: إخفاء المنتجات بناءً على حالة المخزون والـ variants
+    // ✅ تحسين الفلترة: إخفاء المنتجات بناءً على حالة المخزون
     .filter((product) => {
       // إذا المنتج عنده variants (منتج رئيسي مع نكهات)
       if (product.has_variants || product.is_master_product) {
@@ -58,8 +57,9 @@ export async function GET() {
         return product.product_variants.length > 0;
       }
       
-      // إذا المنتج عادي بدون variants، أظهره فقط إذا كان مخزونه أكبر من 0
-      return (product.stock_estimate ?? 0) > 0;
+      // إذا المنتج عادي بدون variants
+      // ✅ تأكد أن المخزون أكبر من 0 AND المنتج نشط
+      return (product.stock_estimate ?? 0) > 0 && product.is_active === true;
     });
 
     return NextResponse.json(
