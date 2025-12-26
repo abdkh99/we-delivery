@@ -1,6 +1,10 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 
+// ✅ إضافة dynamic rendering لـ Vercel
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export async function GET() {
   try {
     const supabase = await createClient();
@@ -59,7 +63,6 @@ export async function GET() {
         
         // ✅ إذا المنتج عادي (بدون variants)
         // أظهر المنتج إذا المخزون > 0
-        // ملاحظة: لا نتحقق من is_active هنا لأننا تحققنا منها بالفلتر الأولي
         return (product.stock_estimate ?? 0) > 0;
       });
 
@@ -67,7 +70,10 @@ export async function GET() {
       { products: sanitizedProducts },
       {
         headers: {
-          "Cache-Control": "public, s-maxage=30, stale-while-revalidate=60",
+          // ✅ منع Vercel من كاش الـ response
+          "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+          "Pragma": "no-cache",
+          "Expires": "0",
         },
       }
     );
