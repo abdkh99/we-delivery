@@ -64,7 +64,12 @@ export default function LoginPage() {
       }
 
       if (data.user) {
-        // Successfully logged in
+        setSuccess("تم تسجيل الدخول بنجاح! جاري التحويل...");
+        
+        // الانتظار قليلاً قبل التوجيه
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        // Successfully logged in - التوجيه للصفحة الرئيسية
         router.push("/");
         router.refresh();
       }

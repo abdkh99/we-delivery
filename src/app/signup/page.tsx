@@ -127,8 +127,6 @@ export default function SignupPage() {
       const generatedEmail = `${username.toLowerCase()}@estore.local`;
 
       // Sign up with Supabase Auth
-      // Note: Email confirmation should be disabled in Supabase Dashboard
-      // Go to: Authentication → Providers → Email → Confirm email: OFF
       const { data, error } = await supabase.auth.signUp({
         email: generatedEmail,
         password,
@@ -157,8 +155,9 @@ export default function SignupPage() {
       }
 
       if (data.user) {
-        // The user profile will be created automatically by the database trigger
-        // Wait a moment for the trigger to complete
+        setSuccess("تم إنشاء الحساب بنجاح! جاري التحويل...");
+        
+        // Wait for the database trigger to complete
         await new Promise((resolve) => setTimeout(resolve, 1000));
 
         // Redirect to home page
@@ -406,7 +405,7 @@ export default function SignupPage() {
           )}
 
           {success && (
-            <div className="bg-blue-50 border border-blue-200 text-blue-600 px-4 py-3 rounded-md">
+            <div className="bg-green-50 border border-green-200 text-green-600 px-4 py-3 rounded-md">
               {success}
             </div>
           )}

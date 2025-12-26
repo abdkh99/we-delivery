@@ -7,17 +7,86 @@ import Navigation from "@/components/Navigation";
 import { Package, Truck, Star, MapPin, Phone, Clock } from "lucide-react";
 import LoadingAnimation from "@/components/LoadingAnimation";
 
+// تخزين محتوى الصفحة الرئيسية
+const CACHE_KEY = 'home_page_cache';
+const CACHE_VERSION = '1.0';
+const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 ساعة
+
+interface CachedData {
+  version: string;
+  timestamp: number;
+  hasLoadedOnce: boolean;
+}
+
 export default function Home() {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setLoading(false);
-    }, 2500);
+    // التحقق من الكاش
+    const checkCache = () => {
+      try {
+        const cached = localStorage.getItem(CACHE_KEY);
+        if (cached) {
+          const data: CachedData = JSON.parse(cached);
+          const now = Date.now();
+          
+          // إذا كان الكاش صالح (أقل من 24 ساعة) وتم التحميل مرة واحدة على الأقل
+          if (
+            data.version === CACHE_VERSION &&
+            data.hasLoadedOnce &&
+            now - data.timestamp < CACHE_DURATION
+          ) {
+            // تحميل فوري بدون تأخير
+            setLoading(false);
+            return true;
+          }
+        }
+      } catch (error) {
+        console.error('Error reading cache:', error);
+      }
+      return false;
+    };
 
-    return () => clearTimeout(timer);
+    const wasLoadedFromCache = checkCache();
+
+    if (!wasLoadedFromCache) {
+      // أول مرة أو الكاش منتهي - عرض الأنيميشن
+      const timer = setTimeout(() => {
+        setLoading(false);
+        
+        // حفظ في الكاش
+        try {
+          const cacheData: CachedData = {
+            version: CACHE_VERSION,
+            timestamp: Date.now(),
+            hasLoadedOnce: true
+          };
+          localStorage.setItem(CACHE_KEY, JSON.stringify(cacheData));
+        } catch (error) {
+          console.error('Error saving cache:', error);
+        }
+      }, 2500);
+
+      return () => clearTimeout(timer);
+    }
   }, []);
+
+  // تحديث الكاش عند تسجيل الدخول/الخروج
+  useEffect(() => {
+    if (user !== null) {
+      try {
+        const cacheData: CachedData = {
+          version: CACHE_VERSION,
+          timestamp: Date.now(),
+          hasLoadedOnce: true
+        };
+        localStorage.setItem(CACHE_KEY, JSON.stringify(cacheData));
+      } catch (error) {
+        console.error('Error updating cache:', error);
+      }
+    }
+  }, [user]);
 
   if (loading) {
     return <LoadingAnimation />;
