@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import useSWR from "swr";
 import { fetcher } from "@/lib/fetcher";
 import Link from "next/link";
@@ -57,33 +57,25 @@ export default function ProductsPage() {
   const [addingToCart, setAddingToCart] = useState<string | null>(null);
   const [selectedVariants, setSelectedVariants] = useState<Record<string, string>>({});
   const [variantImages, setVariantImages] = useState<Record<string, string | null>>({});
-  const [isInitialLoad, setIsInitialLoad] = useState(true);
   const { addItem } = useCart();
   const { user } = useAuth();
   const router = useRouter();
 
-  const { data, error, isLoading, isValidating } = useSWR<{ products: ProductWithVariants[] }>(
+  // ✅ إزالة keepPreviousData تماماً وإضافة loadingTimeout
+  const { data, error, isLoading } = useSWR<{ products: ProductWithVariants[] }>(
     "/api/products",
     fetcher,
     {
       revalidateOnFocus: false,
-      revalidateOnReconnect: false,
+      revalidateOnReconnect: true,
       refreshWhenOffline: false,
       refreshWhenHidden: false,
       refreshInterval: 0,
-      dedupingInterval: 60000,
-      revalidateIfStale: false,
-      // ✅ عدم استخدام keepPreviousData لإظهار skeleton
-      keepPreviousData: false,
+      dedupingInterval: 2000, // ✅ تقليل dedupe لإظهار loading
+      revalidateIfStale: true, // ✅ تفعيل revalidation
+      // ❌ إزالة keepPreviousData
     }
   );
-
-  // ✅ تتبع أول تحميل
-  useEffect(() => {
-    if (data || error) {
-      setIsInitialLoad(false);
-    }
-  }, [data, error]);
 
   const products = useMemo(() => data?.products ?? [], [data?.products]);
 
@@ -126,8 +118,8 @@ export default function ProductsPage() {
     return sorted;
   }, [products, searchTerm, selectedCategory, sortOption]);
 
-  // ✅ إظهار skeleton أثناء التحميل الأولي أو أثناء إعادة التحقق
-  if (isLoading || (isInitialLoad && isValidating)) {
+  // ✅ إظهار skeleton فقط إذا كان loading و ما في data
+  if (isLoading && !data) {
     return (
       <div className="min-h-screen bg-gray-50">
         <Navigation />
@@ -478,8 +470,7 @@ export default function ProductsPage() {
                   </button>
                 </div>
               </div>
-            ))}
-          </div>
+            ))}</div>
         )}
       </div>
     </div>
