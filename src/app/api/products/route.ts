@@ -96,7 +96,7 @@ export async function GET() {
     console.error("Error in products API:", error);
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
     return NextResponse.json(
-      { error: "Internal server error", message: message: errorMessage },
+      { error: "Internal server error", message: errorMessage },
       { status: 500 }
     );
   }
