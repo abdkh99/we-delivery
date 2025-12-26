@@ -39,6 +39,8 @@ export async function GET() {
       );
     }
 
+    console.log(`📦 Total products from DB: ${products?.length || 0}`);
+
     // ✅ فلترة المنتجات بشكل صحيح
     const sanitizedProducts = (products || [])
       .map((product) => {
@@ -52,19 +54,32 @@ export async function GET() {
         return {
           ...product,
           product_variants: activeVariants,
+          _hasVariants: activeVariants.length > 0, // ✅ flag مساعد
         };
       })
       .filter((product) => {
-        // ✅ إذا المنتج master product (له variants)
-        if (product.has_variants === true || product.is_master_product === true) {
-          // أظهر المنتج فقط إذا كان عنده variants متاحة
-          return product.product_variants.length > 0;
-        }
+        // ✅ المنطق الصحيح: تحقق من وجود variants أولاً
+        const hasVariants = product.product_variants && product.product_variants.length > 0;
         
-        // ✅ إذا المنتج عادي (بدون variants)
-        // أظهر المنتج إذا المخزون > 0
-        return (product.stock_estimate ?? 0) > 0;
+        if (hasVariants) {
+          // ✅ المنتج له variants: أظهره فقط إذا كان عنده variants متاحة
+          const hasAvailableVariants = product._hasVariants;
+          console.log(`Product "${product.name}" - Has variants: ${product.product_variants.length}, Available: ${hasAvailableVariants}`);
+          return hasAvailableVariants;
+        } else {
+          // ✅ المنتج عادي (بدون variants): أظهره إذا المخزون > 0
+          const isAvailable = (product.stock_estimate ?? 0) > 0;
+          console.log(`Product "${product.name}" - Regular product, Stock: ${product.stock_estimate}, Available: ${isAvailable}`);
+          return isAvailable;
+        }
+      })
+      .map((product) => {
+        // ✅ إزالة الـ flag المساعد قبل الإرجاع
+        const { _hasVariants, ...cleanProduct } = product;
+        return cleanProduct;
       });
+
+    console.log(`✅ Products after filtering: ${sanitizedProducts.length}`);
 
     return NextResponse.json(
       { products: sanitizedProducts },
@@ -81,7 +96,7 @@ export async function GET() {
     console.error("Error in products API:", error);
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
     return NextResponse.json(
-      { error: "Internal server error", message: errorMessage },
+      { error: "Internal server error", message: message: errorMessage },
       { status: 500 }
     );
   }
