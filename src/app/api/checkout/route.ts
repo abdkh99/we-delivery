@@ -1,16 +1,15 @@
 // ==========================================
-// WORKING CHECKOUT API - TESTED & VERIFIED
-// Replace: src/app/api/checkout/route.ts
+// FIXED CHECKOUT API - Uses Service Role
 // ==========================================
 
 import { createClient } from "@/lib/supabase/server";
+import { getServiceSupabaseClient } from "@/lib/supabase/service";
 import { NextResponse } from "next/server";
 
-// Utility functions (inline to avoid import issues)
+// Utility functions
 function calculateDeliveryFee(distance: number, totalPrice: number): number {
   const FREE_DELIVERY_THRESHOLD = 100000;
   const BASE_FEE = 2000;
-
   if (totalPrice >= FREE_DELIVERY_THRESHOLD) {
     return 0;
   }
@@ -19,8 +18,7 @@ function calculateDeliveryFee(distance: number, totalPrice: number): number {
 
 function calculatePlatformCommission(totalPrice: number): number {
   const COMMISSION_THRESHOLD = 10000;
-  const COMMISSION_RATE = 0.05; // 5%
-
+  const COMMISSION_RATE = 0.05;
   if (totalPrice <= COMMISSION_THRESHOLD) {
     return 0;
   }
@@ -39,15 +37,12 @@ export async function POST(request: Request) {
     console.log("🚀 CHECKOUT API STARTED");
     console.log("===========================================\n");
 
-    const supabase = await createClient();
-
-    // ============================================
-    // 1. AUTHENTICATION
-    // ============================================
+    // 1. التحقق من المصادقة باستخدام user client
+    const userSupabase = await createClient();
     const {
       data: { user },
       error: authError,
-    } = await supabase.auth.getUser();
+    } = await userSupabase.auth.getUser();
 
     if (authError || !user) {
       console.error("❌ Auth failed:", authError?.message);
@@ -59,9 +54,17 @@ export async function POST(request: Request) {
 
     console.log("✅ User authenticated:", user.id);
 
-    // ============================================
-    // 2. PARSE REQUEST BODY
-    // ============================================
+    // 2. استخدام service role client لباقي العمليات
+    const supabase = getServiceSupabaseClient({ required: true });
+    if (!supabase) {
+      console.error("❌ Service role client not available");
+      return NextResponse.json(
+        { error: "خطأ في الخادم - service role غير متوفر" },
+        { status: 500 }
+      );
+    }
+
+    // 3. تحليل البيانات
     let body;
     try {
       body = await request.json();
@@ -73,9 +76,7 @@ export async function POST(request: Request) {
 
     const { items, deliveryAddress, deliveryLat, deliveryLng, notes } = body;
 
-    // ============================================
-    // 3. BASIC VALIDATION
-    // ============================================
+    // 4. التحقق الأساسي
     if (!items || !Array.isArray(items) || items.length === 0) {
       console.error("❌ No items in cart");
       return NextResponse.json({ error: "السلة فارغة" }, { status: 400 });
@@ -91,14 +92,9 @@ export async function POST(request: Request) {
 
     console.log("✅ Basic validation passed");
 
-    // ============================================
-    // 4. VERIFY PRODUCTS EXIST IN DATABASE
-    // ============================================
+    // 5. التحقق من المنتجات
     console.log("\n🔍 Verifying products...");
-
-    const productIds = items
-      .map((item) => item?.product?.id)
-      .filter((id) => id);
+    const productIds = items.map((item) => item?.product?.id).filter((id) => id);
 
     if (productIds.length === 0) {
       console.error("❌ No valid product IDs");
@@ -116,35 +112,22 @@ export async function POST(request: Request) {
     if (productsError) {
       console.error("❌ Database error:", productsError);
       return NextResponse.json(
-        { error: "خطأ في قاعدة البيانات" },
+        { error: "خطأ في قاعدة البيانات", details: productsError.message },
         { status: 500 }
       );
     }
 
     if (!dbProducts || dbProducts.length !== productIds.length) {
       console.error("❌ Some products not found");
-      console.log("Requested:", productIds);
-      console.log(
-        "Found:",
-        dbProducts?.map((p) => p.id)
-      );
-
       return NextResponse.json(
-        {
-          error: "بعض المنتجات غير متوفرة",
-          message: "يرجى تحديث السلة والمحاولة مرة أخرى",
-        },
+        { error: "بعض المنتجات غير متوفرة" },
         { status: 400 }
       );
     }
 
-    // Check if products are active
     const inactiveProducts = dbProducts.filter((p) => !p.is_active);
     if (inactiveProducts.length > 0) {
-      console.error(
-        "❌ Inactive products:",
-        inactiveProducts.map((p) => p.name)
-      );
+      console.error("❌ Inactive products:", inactiveProducts.map((p) => p.name));
       return NextResponse.json(
         { error: "بعض المنتجات غير متوفرة حالياً" },
         { status: 400 }
@@ -153,11 +136,8 @@ export async function POST(request: Request) {
 
     console.log("✅ All products verified and active");
 
-    // ============================================
-    // 5. VALIDATE STOCK
-    // ============================================
+    // 6. التحقق من المخزون
     console.log("\n📊 Checking stock...");
-
     for (const item of items) {
       const dbProduct = dbProducts.find((p) => p.id === item.product.id);
       if (!dbProduct) continue;
@@ -176,11 +156,8 @@ export async function POST(request: Request) {
 
     console.log("✅ Stock available for all items");
 
-    // ============================================
-    // 6. CALCULATE TOTALS
-    // ============================================
+    // 7. حساب الإجماليات
     console.log("\n💰 Calculating totals...");
-
     const totalPrice = items.reduce(
       (sum, item) => sum + item.product.price * item.quantity,
       0
@@ -194,11 +171,8 @@ export async function POST(request: Request) {
     console.log("Commission:", platformCommission);
     console.log("Grand Total:", totalPrice + deliveryFee + platformCommission);
 
-    // ============================================
-    // 7. VALIDATE PAYMENT (Points vs Cash)
-    // ============================================
+    // 8. التحقق من الدفع
     console.log("\n💳 Validating payment...");
-
     const itemsForValidation = items.map((item) => ({
       product_id: item.product.id,
       quantity: item.quantity,
@@ -243,11 +217,8 @@ export async function POST(request: Request) {
     console.log("Cash amount:", cashAmount);
     console.log("Payment method:", paymentMethod);
 
-    // ============================================
-    // 8. CREATE ORDER
-    // ============================================
+    // 9. إنشاء الطلب
     console.log("\n📝 Creating order...");
-
     const orderData = {
       user_id: user.id,
       total_price: totalPrice + deliveryFee + platformCommission,
@@ -257,7 +228,7 @@ export async function POST(request: Request) {
       lat: parseFloat(deliveryLat.toString()),
       lng: parseFloat(deliveryLng.toString()),
       notes: notes?.trim() || null,
-      status: "pending",
+      status: "pending" as const,
       points_used: pointsToDeduct,
       cash_amount: cashAmount + deliveryFee + platformCommission,
       payment_method: paymentMethod,
@@ -275,6 +246,8 @@ export async function POST(request: Request) {
         {
           error: "فشل إنشاء الطلب",
           details: orderError.message,
+          hint: orderError.hint,
+          code: orderError.code,
         },
         { status: 500 }
       );
@@ -282,14 +255,10 @@ export async function POST(request: Request) {
 
     console.log("✅ Order created:", order.id);
 
-    // ============================================
-    // 9. CREATE ORDER ITEMS
-    // ============================================
+    // 10. إنشاء عناصر الطلب
     console.log("\n📦 Creating order items...");
-
     const orderItems = items.map((item) => {
       const dbProduct = dbProducts.find((p) => p.id === item.product.id);
-
       return {
         order_id: order.id,
         product_id: item.product.id,
@@ -300,8 +269,6 @@ export async function POST(request: Request) {
       };
     });
 
-    console.log("Order items to create:", JSON.stringify(orderItems, null, 2));
-
     const { data: createdItems, error: itemsError } = await supabase
       .from("order_items")
       .insert(orderItems)
@@ -309,16 +276,13 @@ export async function POST(request: Request) {
 
     if (itemsError) {
       console.error("❌ Order items creation failed:", itemsError);
-      console.error("Attempted to insert:", orderItems);
-
-      // ROLLBACK: Delete the order
+      // ROLLBACK
       await supabase.from("orders").delete().eq("id", order.id);
-
       return NextResponse.json(
         {
           error: "فشل إضافة المنتجات للطلب",
-          message: "تم إلغاء الطلب",
           details: itemsError.message,
+          hint: itemsError.hint,
         },
         { status: 500 }
       );
@@ -326,12 +290,9 @@ export async function POST(request: Request) {
 
     console.log("✅ Order items created:", createdItems?.length || 0);
 
-    // ============================================
-    // 10. DEDUCT POINTS (if applicable)
-    // ============================================
+    // 11. خصم النقاط
     if (pointsToDeduct > 0) {
       console.log("\n💎 Deducting points:", pointsToDeduct);
-
       const { data: deductResult, error: deductError } = await supabase.rpc(
         "deduct_points_mixed_payment",
         {
@@ -343,15 +304,12 @@ export async function POST(request: Request) {
 
       if (deductError || !deductResult) {
         console.error("❌ Points deduction failed:", deductError);
-
         // ROLLBACK
         await supabase.from("order_items").delete().eq("order_id", order.id);
         await supabase.from("orders").delete().eq("id", order.id);
-
         return NextResponse.json(
           {
             error: "فشل خصم النقاط",
-            message: "تم إلغاء الطلب",
             details: deductError?.message,
           },
           { status: 500 }
@@ -361,18 +319,13 @@ export async function POST(request: Request) {
       console.log("✅ Points deducted successfully");
     }
 
-    // ============================================
-    // 11. UPDATE STOCK - خصم المخزون
-    // ============================================
+    // 12. تحديث المخزون
     console.log("\n📊 Updating stock...");
-
     for (const item of items) {
       const dbProduct = dbProducts.find((p) => p.id === item.product.id);
       if (!dbProduct) continue;
 
-      // خصم من المخزون الرئيسي
       const newStock = Math.max(0, dbProduct.stock_estimate - item.quantity);
-
       const { error: stockError } = await supabase
         .from("products")
         .update({ stock_estimate: newStock })
@@ -380,21 +333,23 @@ export async function POST(request: Request) {
 
       if (stockError) {
         console.warn("⚠️ Stock update warning:", stockError.message);
-        // Don't fail the order for stock update issues
       } else {
         console.log(`✅ Deducted ${item.quantity} from product ${dbProduct.name}`);
       }
 
-      // إذا كان هناك variant، اخصم من مخزونه أيضاً
+      // تحديث مخزون الـ variant إذا وُجد
       if (item.variantId) {
         const { data: variant } = await supabase
           .from("product_variants")
           .select("stock_estimate")
           .eq("id", item.variantId)
           .single();
-        
+
         if (variant) {
-          const newVariantStock = Math.max(0, (variant.stock_estimate || 0) - item.quantity);
+          const newVariantStock = Math.max(
+            0,
+            (variant.stock_estimate || 0) - item.quantity
+          );
           await supabase
             .from("product_variants")
             .update({ stock_estimate: newVariantStock })
@@ -405,12 +360,9 @@ export async function POST(request: Request) {
 
     console.log("✅ Stock updated");
 
-    // ============================================
-    // 12. SUCCESS RESPONSE
-    // ============================================
+    // 13. النجاح!
     const duration = Date.now() - startTime;
-    const potentialPoints =
-      cashAmount > 0 ? calculateLoyaltyPoints(cashAmount) : 0;
+    const potentialPoints = cashAmount > 0 ? calculateLoyaltyPoints(cashAmount) : 0;
 
     console.log("\n===========================================");
     console.log("🎉 CHECKOUT COMPLETED SUCCESSFULLY");
