@@ -17,6 +17,7 @@ import {
   AlertCircle,
   LogIn,
   TrendingUp,
+  XCircle,
 } from "lucide-react";
 import { useCart } from "@/contexts/CartContext";
 import { useAuth } from "@/contexts/AuthContext";
@@ -27,7 +28,6 @@ import { ProductsGridSkeleton } from "@/components/Skeleton";
 
 type Product = Database["public"]["Tables"]["products"]["Row"];
 
-// تعريف نوع منفصل للنكهات
 interface ProductVariant {
   id: string;
   master_product_id: string;
@@ -44,7 +44,6 @@ interface ProductVariant {
   price_updated_at?: string | null;
 }
 
-// تعريف المنتج مع النكهات
 interface ProductWithVariants extends Product {
   product_variants?: ProductVariant[];
 }
@@ -57,11 +56,13 @@ export default function ProductsPage() {
   const [addingToCart, setAddingToCart] = useState<string | null>(null);
   const [selectedVariants, setSelectedVariants] = useState<Record<string, string>>({});
   const [variantImages, setVariantImages] = useState<Record<string, string | null>>({});
+  // ✅ تتبع stock للنكهة المختارة
+  const [variantStocks, setVariantStocks] = useState<Record<string, number>>({});
+  
   const { addItem } = useCart();
   const { user } = useAuth();
   const router = useRouter();
 
-  // ✅ إزالة keepPreviousData تماماً وإضافة loadingTimeout
   const { data, error, isLoading } = useSWR<{ products: ProductWithVariants[] }>(
     "/api/products",
     fetcher,
@@ -71,9 +72,8 @@ export default function ProductsPage() {
       refreshWhenOffline: false,
       refreshWhenHidden: false,
       refreshInterval: 0,
-      dedupingInterval: 2000, // ✅ تقليل dedupe لإظهار loading
-      revalidateIfStale: true, // ✅ تفعيل revalidation
-      // ❌ إزالة keepPreviousData
+      dedupingInterval: 2000,
+      revalidateIfStale: true,
     }
   );
 
@@ -118,7 +118,6 @@ export default function ProductsPage() {
     return sorted;
   }, [products, searchTerm, selectedCategory, sortOption]);
 
-  // ✅ إظهار skeleton فقط إذا كان loading و ما في data
   if (isLoading && !data) {
     return (
       <div className="min-h-screen bg-gray-50">
@@ -241,43 +240,61 @@ export default function ProductsPage() {
                 : "space-y-4"
             }
           >
-            {filteredProducts.map((product) => (
-              <div
-                key={product.id}
-                className={`bg-white rounded-3xl border border-transparent hover:border-blue-200 shadow-sm hover:shadow-lg transition-all duration-300 flex ${
-                  viewMode === "grid" ? "flex-col" : "flex-row gap-4"
-                }`}
-              >
-                <Link
-                  href={`/products/${product.id}`}
-                  className={`block ${viewMode === "grid" ? "flex flex-col" : "flex flex-row gap-6"}`}
+            {filteredProducts.map((product) => {
+              const productWithVariants = product as ProductWithVariants;
+              const hasVariants = productWithVariants.product_variants && productWithVariants.product_variants.length > 0;
+              
+              // ✅ حساب stock المنتج/النكهة الحالية
+              let currentStock = product.stock_estimate;
+              let isVariantOutOfStock = false;
+              
+              if (hasVariants) {
+                const selectedVariantId = selectedVariants[product.id];
+                if (selectedVariantId) {
+                  const selectedVariant = productWithVariants.product_variants!.find((v) => v.id === selectedVariantId);
+                  if (selectedVariant) {
+                    currentStock = selectedVariant.stock_estimate || 0;
+                    isVariantOutOfStock = currentStock === 0;
+                  }
+                }
+              }
+
+              return (
+                <div
+                  key={product.id}
+                  className={`bg-white rounded-3xl border border-transparent hover:border-blue-200 shadow-sm hover:shadow-lg transition-all duration-300 flex ${
+                    viewMode === "grid" ? "flex-col" : "flex-row gap-4"
+                  }`}
                 >
-                  <div
-                    className={`relative overflow-hidden rounded-2xl ${
-                      viewMode === "grid" ? "aspect-square" : "w-40 h-40"
-                    } bg-gradient-to-br from-gray-50 to-gray-100`}
+                  <Link
+                    href={`/products/${product.id}`}
+                    className={`block ${viewMode === "grid" ? "flex flex-col" : "flex flex-row gap-6"}`}
                   >
-                    {variantImages[product.id] || product.image_url ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={
-                          variantImages[product.id] || product.image_url || ""
-                        }
-                        alt={product.name}
-                        loading="lazy"
-                        className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 hover:scale-105"
-                      />
-                    ) : (
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <Package className="h-12 w-12 text-gray-400" />
-                      </div>
-                    )}
-                    <div className="absolute top-3 right-3 flex gap-2">
-                      <div className="bg-white/80 backdrop-blur px-3 py-1 rounded-full text-xs font-semibold text-blue-600">
-                        {getCategoryArabic(product.category)}
-                      </div>
-                      {(product as ProductWithVariants).product_variants &&
-                        (product as ProductWithVariants).product_variants!.length > 0 && (
+                    <div
+                      className={`relative overflow-hidden rounded-2xl ${
+                        viewMode === "grid" ? "aspect-square" : "w-40 h-40"
+                      } bg-gradient-to-br from-gray-50 to-gray-100`}
+                    >
+                      {variantImages[product.id] || product.image_url ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={
+                            variantImages[product.id] || product.image_url || ""
+                          }
+                          alt={product.name}
+                          loading="lazy"
+                          className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 hover:scale-105"
+                        />
+                      ) : (
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <Package className="h-12 w-12 text-gray-400" />
+                        </div>
+                      )}
+                      <div className="absolute top-3 right-3 flex gap-2">
+                        <div className="bg-white/80 backdrop-blur px-3 py-1 rounded-full text-xs font-semibold text-blue-600">
+                          {getCategoryArabic(product.category)}
+                        </div>
+                        {hasVariants && (
                           <div className="bg-blue-600 text-white text-xs px-3 py-1 rounded-full font-medium flex items-center gap-1 shadow-sm">
                             <svg
                               className="w-3 h-3"
@@ -293,184 +310,232 @@ export default function ProductsPage() {
                               />
                             </svg>
                             <span>
-                              {
-                                (product as ProductWithVariants).product_variants!.length
-                              }{" "}
-                              نكهات
+                              {productWithVariants.product_variants!.length} نكهات
                             </span>
                           </div>
                         )}
-                    </div>
-                  </div>
-
-                  <div className={`flex-1 ${viewMode === "grid" ? "mt-4 px-3 sm:px-4 pb-4" : ""}`}>
-                    <h3 className="font-bold text-gray-900 text-base sm:text-lg line-clamp-2">
-                      {product.name}
-                    </h3>
-
-                    <p className="text-sm text-gray-600 mt-2 line-clamp-2 min-h-[40px]">
-                      {product.description || "منتج طازج من موردينا المحليين."}
-                    </p>
-
-                    <div className="flex items-center justify-between mt-4">
-                      <div>
-                        <p className="text-xs text-gray-500">السعر الحالي</p>
-                        <p className="text-xl font-bold text-blue-600">
-                          {formatCurrency(product.price)}
-                        </p>
                       </div>
-
-                      <span
-                        className={`text-xs font-semibold px-3 py-1 rounded-full ${
-                          product.stock_estimate > 0
-                            ? "bg-green-50 text-green-600"
-                            : "bg-red-50 text-red-600"
-                        }`}
-                      >
-                        {product.stock_estimate > 0
-                          ? `متوفر (${product.stock_estimate})`
-                          : "غير متوفر حالياً"}
-                      </span>
                     </div>
-                  </div>
-                </Link>
 
-                <div className="px-3 sm:px-4 pb-4 flex flex-col gap-2 mt-auto w-full">
-                  {(product as ProductWithVariants).product_variants &&
-                  (product as ProductWithVariants).product_variants!.length > 0 ? (
-                    <select
-                      value={selectedVariants[product.id] || ""}
-                      onChange={(e) => {
-                        const variantId = e.target.value;
-                        setSelectedVariants((prev) => ({
-                          ...prev,
-                          [product.id]: variantId,
-                        }));
-                        if (variantId) {
-                          const selectedVariant = (
-                            product as ProductWithVariants
-                          ).product_variants!.find((v) => v.id === variantId);
-                          setVariantImages((prev) => ({
+                    <div className={`flex-1 ${viewMode === "grid" ? "mt-4 px-3 sm:px-4 pb-4" : ""}`}>
+                      <h3 className="font-bold text-gray-900 text-base sm:text-lg line-clamp-2">
+                        {product.name}
+                      </h3>
+
+                      <p className="text-sm text-gray-600 mt-2 line-clamp-2 min-h-[40px]">
+                        {product.description || "منتج طازج من موردينا المحليين."}
+                      </p>
+
+                      <div className="flex items-center justify-between mt-4">
+                        <div>
+                          <p className="text-xs text-gray-500">السعر الحالي</p>
+                          <p className="text-xl font-bold text-blue-600">
+                            {formatCurrency(product.price)}
+                          </p>
+                        </div>
+
+                        <span
+                          className={`text-xs font-semibold px-3 py-1 rounded-full ${
+                            product.stock_estimate > 0
+                              ? "bg-green-50 text-green-600"
+                              : "bg-red-50 text-red-600"
+                          }`}
+                        >
+                          {product.stock_estimate > 0
+                            ? `متوفر (${product.stock_estimate})`
+                            : "غير متوفر حالياً"}
+                        </span>
+                      </div>
+                    </div>
+                  </Link>
+
+                  <div className="px-3 sm:px-4 pb-4 flex flex-col gap-2 mt-auto w-full">
+                    {hasVariants ? (
+                      <select
+                        value={selectedVariants[product.id] || ""}
+                        onChange={(e) => {
+                          const variantId = e.target.value;
+                          setSelectedVariants((prev) => ({
                             ...prev,
-                            [product.id]: selectedVariant?.image_url || null,
+                            [product.id]: variantId,
                           }));
-                        } else {
-                          setVariantImages((prev) => ({
-                            ...prev,
-                            [product.id]: null,
-                          }));
-                        }
-                      }}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-2xl text-sm text-gray-900 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-500 font-medium"
-                    >
-                      <option value="">🎨 اختر النكهة</option>
-                      {(product as ProductWithVariants).product_variants!.map(
-                        (variant) => (
+                          
+                          if (variantId) {
+                            const selectedVariant = productWithVariants.product_variants!.find((v) => v.id === variantId);
+                            if (selectedVariant) {
+                              // ✅ تحديث الصورة والمخزون
+                              setVariantImages((prev) => ({
+                                ...prev,
+                                [product.id]: selectedVariant.image_url || null,
+                              }));
+                              setVariantStocks((prev) => ({
+                                ...prev,
+                                [product.id]: selectedVariant.stock_estimate || 0,
+                              }));
+                            }
+                          } else {
+                            // ✅ إعادة تعيين عند إزالة الاختيار
+                            setVariantImages((prev) => ({
+                              ...prev,
+                              [product.id]: null,
+                            }));
+                            setVariantStocks((prev) => ({
+                              ...prev,
+                              [product.id]: 0,
+                            }));
+                          }
+                        }}
+                        className="w-full px-3 py-2 border border-gray-200 rounded-2xl text-sm text-gray-900 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-500 font-medium"
+                      >
+                        <option value="">🎨 اختر النكهة</option>
+                        {productWithVariants.product_variants!.map((variant) => (
                           <option key={variant.id} value={variant.id}>
                             {variant.variant_name} - {formatCurrency(variant.price)}
+                            {(variant.stock_estimate || 0) === 0 ? " (غير متوفر)" : ""}
                           </option>
-                        )
-                      )}
-                    </select>
-                  ) : (
-                    <Link
-                      href={`/products/${product.id}`}
-                      className="w-full bg-gray-100 text-gray-800 py-3 px-4 rounded-2xl hover:bg-gray-200 transition-colors text-center font-medium text-sm"
-                    >
-                      عرض التفاصيل
-                    </Link>
-                  )}
+                        ))}
+                      </select>
+                    ) : (
+                      <Link
+                        href={`/products/${product.id}`}
+                        className="w-full bg-gray-100 text-gray-800 py-3 px-4 rounded-2xl hover:bg-gray-200 transition-colors text-center font-medium text-sm"
+                      >
+                        عرض التفاصيل
+                      </Link>
+                    )}
 
-                  <button
-                    onClick={async () => {
-                      if (!user) {
-                        toast.error("يجب تسجيل الدخول أولاً! 🔐", {
-                          description: "سجل دخولك للمتابعة إلى سلة التسوق",
-                          icon: <LogIn className="h-5 w-5" />,
-                          action: {
-                            label: "تسجيل الدخول",
-                            onClick: () => router.push("/login"),
-                          },
-                          duration: 5000,
-                        });
-                        return;
-                      }
+                    <button
+                      onClick={async () => {
+                        if (!user) {
+                          toast.error("يجب تسجيل الدخول أولاً! 🔐", {
+                            description: "سجل دخولك للمتابعة إلى سلة التسوق",
+                            icon: <LogIn className="h-5 w-5" />,
+                            action: {
+                              label: "تسجيل الدخول",
+                              onClick: () => router.push("/login"),
+                            },
+                            duration: 5000,
+                          });
+                          return;
+                        }
 
-                      setAddingToCart(product.id);
-                      try {
-                        const productWithVariants = product as ProductWithVariants;
-                        if (
-                          productWithVariants.product_variants &&
-                          productWithVariants.product_variants.length > 0
-                        ) {
+                        // ✅ التحقق من النكهة قبل الإضافة
+                        if (hasVariants) {
                           const selectedVariantId = selectedVariants[product.id];
                           if (!selectedVariantId) {
-                            toast.error("من فضلك اختر النكهة ", {
+                            toast.error("من فضلك اختر النكهة ⚠️", {
                               description: "يجب اختيار نكهة قبل الإضافة للسلة",
                               icon: <AlertCircle className="h-5 w-5" />,
                             });
-                            setAddingToCart(null);
                             return;
                           }
-                          const selectedVariant =
-                            productWithVariants.product_variants.find(
-                              (v) => v.id === selectedVariantId
-                            );
-                          if (selectedVariant) {
-                            addItem(
-                              {
-                                ...product,
-                                id: selectedVariant.id,
-                                name: `${product.name} - ${selectedVariant.variant_name}`,
-                                price: selectedVariant.price,
-                                stock_estimate:
-                                  selectedVariant.stock_estimate || 0,
-                                sku: selectedVariant.variant_sku,
-                                image_url:
-                                  selectedVariant.image_url || product.image_url,
-                              },
-                              1,
-                              selectedVariant.id
-                            );
+
+                          const selectedVariant = productWithVariants.product_variants!.find(
+                            (v) => v.id === selectedVariantId
+                          );
+
+                          // ✅ التحقق من المخزون
+                          if (!selectedVariant || (selectedVariant.stock_estimate || 0) === 0) {
+                            toast.error("النكهة المختارة غير متوفرة ❌", {
+                              description: "الرجاء اختيار نكهة أخرى متوفرة",
+                              icon: <XCircle className="h-5 w-5" />,
+                            });
+                            return;
                           }
-                        } else {
-                          addItem(product, 1);
                         }
 
-                        toast.success("تم إضافة المنتج للسلة ✅", {
-                          description: `تم إضافة ${product.name} إلى سلة التسوق`,
-                          icon: <CheckCircle className="h-5 w-5" />,
-                          position: "bottom-right",
-                        });
-                      } catch {
-                        toast.error("فشل في إضافة المنتج ❌", {
-                          description: "يرجى المحاولة مرة أخرى",
-                          icon: <AlertCircle className="h-5 w-5" />,
-                        });
-                      } finally {
-                        setAddingToCart(null);
+                        setAddingToCart(product.id);
+                        try {
+                          if (hasVariants) {
+                            const selectedVariantId = selectedVariants[product.id];
+                            const selectedVariant = productWithVariants.product_variants!.find(
+                              (v) => v.id === selectedVariantId
+                            );
+                            
+                            if (selectedVariant) {
+                              addItem(
+                                {
+                                  ...product,
+                                  id: selectedVariant.id,
+                                  name: `${product.name} - ${selectedVariant.variant_name}`,
+                                  price: selectedVariant.price,
+                                  stock_estimate: selectedVariant.stock_estimate || 0,
+                                  sku: selectedVariant.variant_sku,
+                                  image_url: selectedVariant.image_url || product.image_url,
+                                },
+                                1,
+                                selectedVariant.id
+                              );
+                            }
+                          } else {
+                            addItem(product, 1);
+                          }
+
+                          toast.success("تم إضافة المنتج للسلة ✅", {
+                            description: `تم إضافة ${product.name} إلى سلة التسوق`,
+                            icon: <CheckCircle className="h-5 w-5" />,
+                            position: "bottom-right",
+                          });
+                        } catch {
+                          toast.error("فشل في إضافة المنتج ❌", {
+                            description: "يرجى المحاولة مرة أخرى",
+                            icon: <AlertCircle className="h-5 w-5" />,
+                          });
+                        } finally {
+                          setAddingToCart(null);
+                        }
+                      }}
+                      disabled={
+                        addingToCart === product.id ||
+                        (hasVariants
+                          ? !selectedVariants[product.id] || isVariantOutOfStock
+                          : currentStock === 0)
                       }
-                    }}
-                    className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white py-3 rounded-2xl hover:from-blue-700 hover:to-blue-800 transition-all disabled:from-gray-200 disabled:to-gray-300 disabled:text-gray-500 flex items-center justify-center gap-2 font-semibold text-sm"
-                    disabled={
-                      product.stock_estimate === 0 || addingToCart === product.id
-                    }
-                  >
-                    {addingToCart === product.id ? (
-                      <>
-                        <LoadingSpinner size="small" color="white" />
-                        <span>جاري الإضافة...</span>
-                      </>
-                    ) : (
-                      <>
-                        <ShoppingCart className="h-4 w-4" />
-                        {product.stock_estimate > 0 ? "إضافة للسلة" : "غير متوفر"}
-                      </>
-                    )}
-                  </button>
+                      className={`w-full py-3 rounded-2xl transition-all flex items-center justify-center gap-2 font-semibold text-sm ${
+                        addingToCart === product.id ||
+                        (hasVariants
+                          ? !selectedVariants[product.id] || isVariantOutOfStock
+                          : currentStock === 0)
+                          ? "bg-gray-200 text-gray-500 cursor-not-allowed opacity-60"
+                          : "bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:from-blue-700 hover:to-blue-800"
+                      }`}
+                      title={
+                        hasVariants && !selectedVariants[product.id]
+                          ? "الرجاء اختيار النكهة أولاً"
+                          : isVariantOutOfStock
+                          ? "النكهة المختارة غير متوفرة حالياً"
+                          : currentStock === 0
+                          ? "غير متوفر حالياً"
+                          : "إضافة إلى السلة"
+                      }
+                    >
+                      {addingToCart === product.id ? (
+                        <>
+                          <LoadingSpinner size="small" color="white" />
+                          <span>جاري الإضافة...</span>
+                        </>
+                      ) : hasVariants && !selectedVariants[product.id] ? (
+                        <>
+                          <AlertCircle className="h-4 w-4" />
+                          <span>اختر النكهة أولاً</span>
+                        </>
+                      ) : isVariantOutOfStock || currentStock === 0 ? (
+                        <>
+                          <XCircle className="h-4 w-4" />
+                          <span>غير متوفر</span>
+                        </>
+                      ) : (
+                        <>
+                          <ShoppingCart className="h-4 w-4" />
+                          <span>إضافة للسلة</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
                 </div>
-              </div>
-            ))}</div>
+              );
+            })}
+          </div>
         )}
       </div>
     </div>
