@@ -69,6 +69,7 @@ export async function POST(request: Request) {
     try {
       body = await request.json();
       console.log("📦 Request received with", body.items?.length || 0, "items");
+      console.log("📋 Items:", JSON.stringify(body.items, null, 2));
     } catch (e) {
       console.error("❌ Invalid JSON body");
       return NextResponse.json({ error: "بيانات غير صحيحة" }, { status: 400 });
@@ -92,7 +93,7 @@ export async function POST(request: Request) {
 
     console.log("✅ Basic validation passed");
 
-    // 5. التحقق من المنتجات
+    // 5. التحقق من المنتجات (بدون التحقق من المخزون هنا)
     console.log("\n🔍 Verifying products...");
     const productIds = items.map((item) => item?.product?.id).filter((id) => id);
 
@@ -136,14 +137,23 @@ export async function POST(request: Request) {
 
     console.log("✅ All products verified and active");
 
-    // 6. التحقق من المخزون (مع دعم الـ variants)
+    // 6. التحقق من المخزون (مع دعم كامل للـ variants)
     console.log("\n📊 Checking stock...");
     for (const item of items) {
       const dbProduct = dbProducts.find((p) => p.id === item.product.id);
-      if (!dbProduct) continue;
+      if (!dbProduct) {
+        console.error("❌ Product not found:", item.product.id);
+        continue;
+      }
 
-      // ✅ إذا كان المنتج له variant، تحقق من مخزون الـ variant
+      console.log(`\n🔍 Checking item: ${dbProduct.name}`);
+      console.log(`   - Has variantId: ${!!item.variantId}`);
+      console.log(`   - Requested quantity: ${item.quantity}`);
+
+      // ✅ إذا كان المنتج له variant، تحقق من مخزون الـ variant فقط
       if (item.variantId) {
+        console.log(`   - Checking variant: ${item.variantId}`);
+        
         const { data: variant, error: variantError } = await supabase
           .from("product_variants")
           .select("id, variant_name, stock_estimate, is_active")
@@ -151,7 +161,7 @@ export async function POST(request: Request) {
           .single();
 
         if (variantError || !variant) {
-          console.error("❌ Variant not found:", item.variantId);
+          console.error(`❌ Variant not found: ${item.variantId}`, variantError);
           return NextResponse.json(
             {
               error: "نكهة المنتج غير متوفرة",
@@ -161,8 +171,12 @@ export async function POST(request: Request) {
           );
         }
 
+        console.log(`   - Variant found: ${variant.variant_name}`);
+        console.log(`   - Variant stock: ${variant.stock_estimate}`);
+        console.log(`   - Variant active: ${variant.is_active}`);
+
         if (!variant.is_active) {
-          console.error("❌ Variant inactive:", variant.variant_name);
+          console.error(`❌ Variant inactive: ${variant.variant_name}`);
           return NextResponse.json(
             {
               error: "نكهة المنتج غير متوفرة",
@@ -173,7 +187,8 @@ export async function POST(request: Request) {
         }
 
         if (item.quantity > (variant.stock_estimate || 0)) {
-          console.error("❌ Insufficient variant stock:", variant.variant_name);
+          console.error(`❌ Insufficient variant stock: ${variant.variant_name}`);
+          console.error(`   - Requested: ${item.quantity}, Available: ${variant.stock_estimate}`);
           return NextResponse.json(
             {
               error: "كمية غير متوفرة",
@@ -182,10 +197,16 @@ export async function POST(request: Request) {
             { status: 400 }
           );
         }
+
+        console.log(`✅ Variant stock OK: ${variant.variant_name}`);
       } else {
-        // ✅ منتج عادي بدون variant
+        // ✅ منتج عادي بدون variant - تحقق من مخزون المنتج الرئيسي
+        console.log(`   - Regular product, checking main stock`);
+        console.log(`   - Product stock: ${dbProduct.stock_estimate}`);
+        
         if (item.quantity > dbProduct.stock_estimate) {
-          console.error("❌ Insufficient stock for:", dbProduct.name);
+          console.error(`❌ Insufficient stock: ${dbProduct.name}`);
+          console.error(`   - Requested: ${item.quantity}, Available: ${dbProduct.stock_estimate}`);
           return NextResponse.json(
             {
               error: "كمية غير متوفرة",
@@ -194,10 +215,12 @@ export async function POST(request: Request) {
             { status: 400 }
           );
         }
+
+        console.log(`✅ Product stock OK`);
       }
     }
 
-    console.log("✅ Stock available for all items");
+    console.log("\n✅ Stock available for all items");
 
     // 7. حساب الإجماليات
     console.log("\n💰 Calculating totals...");
@@ -386,7 +409,7 @@ export async function POST(request: Request) {
             .update({ stock_estimate: newVariantStock })
             .eq("id", item.variantId);
           
-          console.log(`✅ Deducted ${item.quantity} from variant ${variant.variant_name}`);
+          console.log(`✅ Deducted ${item.quantity} from variant ${variant.variant_name} (new stock: ${newVariantStock})`);
         }
       } else {
         // ✅ تحديث مخزون المنتج العادي
@@ -399,7 +422,7 @@ export async function POST(request: Request) {
         if (stockError) {
           console.warn("⚠️ Stock update warning:", stockError.message);
         } else {
-          console.log(`✅ Deducted ${item.quantity} from product ${dbProduct.name}`);
+          console.log(`✅ Deducted ${item.quantity} from product ${dbProduct.name} (new stock: ${newStock})`);
         }
       }
     }
