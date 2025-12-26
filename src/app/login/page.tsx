@@ -66,17 +66,16 @@ export default function LoginPage() {
       if (data.user) {
         setSuccess("تم تسجيل الدخول بنجاح! جاري التحويل...");
         
-        // الانتظار قليلاً قبل التوجيه
-        await new Promise(resolve => setTimeout(resolve, 500));
+        // ✅ الانتظار قليلاً قبل التوجيه لضمان تحديث الجلسة
+        await new Promise(resolve => setTimeout(resolve, 800));
         
-        // Successfully logged in - التوجيه للصفحة الرئيسية
-        router.push("/");
-        router.refresh();
+        // ✅ استخدام window.location.href بدلاً من router.push
+        // لضمان إعادة تحميل كاملة للصفحة وتحديث AuthContext
+        window.location.href = "/";
       }
     } catch (err: unknown) {
       console.error("Login error:", err);
       setError("حدث خطأ غير متوقع. يرجى المحاولة مرة أخرى");
-    } finally {
       setLoading(false);
     }
   };
