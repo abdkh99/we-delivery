@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import useSWR from "swr";
 import { fetcher } from "@/lib/fetcher";
 import Link from "next/link";
@@ -16,10 +16,7 @@ import {
   CheckCircle,
   AlertCircle,
   LogIn,
-  Sparkles,
-  Star,
   TrendingUp,
-  Layers,
 } from "lucide-react";
 import { useCart } from "@/contexts/CartContext";
 import { useAuth } from "@/contexts/AuthContext";
@@ -60,11 +57,12 @@ export default function ProductsPage() {
   const [addingToCart, setAddingToCart] = useState<string | null>(null);
   const [selectedVariants, setSelectedVariants] = useState<Record<string, string>>({});
   const [variantImages, setVariantImages] = useState<Record<string, string | null>>({});
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
   const { addItem } = useCart();
   const { user } = useAuth();
   const router = useRouter();
 
-  const { data, error, isLoading } = useSWR<{ products: ProductWithVariants[] }>(
+  const { data, error, isLoading, isValidating } = useSWR<{ products: ProductWithVariants[] }>(
     "/api/products",
     fetcher,
     {
@@ -75,9 +73,17 @@ export default function ProductsPage() {
       refreshInterval: 0,
       dedupingInterval: 60000,
       revalidateIfStale: false,
-      keepPreviousData: true,
+      // ✅ عدم استخدام keepPreviousData لإظهار skeleton
+      keepPreviousData: false,
     }
   );
+
+  // ✅ تتبع أول تحميل
+  useEffect(() => {
+    if (data || error) {
+      setIsInitialLoad(false);
+    }
+  }, [data, error]);
 
   const products = useMemo(() => data?.products ?? [], [data?.products]);
 
@@ -120,28 +126,15 @@ export default function ProductsPage() {
     return sorted;
   }, [products, searchTerm, selectedCategory, sortOption]);
 
-  const featuredStats = useMemo(() => {
-    const totalProducts = products.length;
-    const variantCount = products.reduce(
-      (count, product) => count + ((product as ProductWithVariants).product_variants?.length || 0),
-      0
-    );
-    const stockedProducts = products.filter((p) => (p.stock_estimate ?? 0) > 0).length;
-    return {
-      totalProducts,
-      variantCount,
-      stockedProducts,
-    };
-  }, [products]);
-
-  if (isLoading) {
+  // ✅ إظهار skeleton أثناء التحميل الأولي أو أثناء إعادة التحقق
+  if (isLoading || (isInitialLoad && isValidating)) {
     return (
       <div className="min-h-screen bg-gray-50">
         <Navigation />
         <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8 py-4 sm:py-6 lg:py-8">
-          <div className="mb-4 sm:mb-6 lg:mb-8">
-            <div className="h-8 bg-gray-200 rounded w-48 mb-2 animate-pulse" />
-            <div className="h-4 bg-gray-200 rounded w-64 animate-pulse" />
+          <div className="mb-4 sm:mb-6 lg:mb-8 space-y-3">
+            <div className="h-8 bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 rounded w-48 animate-shimmer bg-[length:200%_100%]" />
+            <div className="h-4 bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 rounded w-64 animate-shimmer bg-[length:200%_100%] animate-delay-100" />
           </div>
           <ProductsGridSkeleton />
         </div>
@@ -176,8 +169,6 @@ export default function ProductsPage() {
       <Navigation />
 
       <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8 py-6 lg:py-10 space-y-6">
-
-
         {/* Filters */}
         <section className="bg-white rounded-3xl border border-gray-100 shadow-sm p-4 sm:p-6 space-y-4">
           <div className="flex flex-col lg:flex-row gap-4">
@@ -221,10 +212,6 @@ export default function ProductsPage() {
                 </select>
                 <TrendingUp className="absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 pointer-events-none" />
               </div>
-
-              <div className="flex rounded-2xl border border-gray-200 overflow-hidden">
-               
-              </div>
             </div>
           </div>
 
@@ -235,7 +222,7 @@ export default function ProductsPage() {
             {selectedCategory && (
               <button
                 onClick={() => setSelectedCategory("")}
-                className="px-4 py-2 bg-blue-50 text-blue-600 rounded-full"
+                className="px-4 py-2 bg-blue-50 text-blue-600 rounded-full hover:bg-blue-100 transition-colors"
               >
                 إزالة الفلتر
               </button>
@@ -498,7 +485,3 @@ export default function ProductsPage() {
     </div>
   );
 }
-
-
-
-
