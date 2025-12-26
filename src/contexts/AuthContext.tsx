@@ -114,10 +114,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(
       async (_event: unknown, session: { user?: User | null } | null) => {
-        setUser((session?.user ?? null) as User | null);
+        const newUser = (session?.user ?? null) as User | null;
+        setUser(newUser);
 
-        if (session?.user) {
-          await fetchProfile(session.user.id);
+        if (newUser) {
+          await fetchProfile(newUser.id);
         } else {
           setProfile(null);
         }
@@ -129,28 +130,46 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => subscription.unsubscribe();
   }, [fetchProfile, supabase]);
 
-  // (duplicate fetchProfile removed)
-
   const signOut = async () => {
     try {
-      // Clear local state first
-      setUser(null);
-      setProfile(null);
-
-      // Sign out from Supabase
+      console.log("🔴 Starting sign out process...");
+      
+      // ✅ 1. Sign out from Supabase first
       const { error } = await supabase.auth.signOut();
 
       if (error) {
-        console.error("Error signing out:", error);
+        console.error("Error signing out from Supabase:", error);
+      } else {
+        console.log("✅ Signed out from Supabase successfully");
       }
 
-      // Clear all local storage
-      localStorage.clear();
-      sessionStorage.clear();
+      // ✅ 2. Clear local state
+      setUser(null);
+      setProfile(null);
+      console.log("✅ Local state cleared");
+
+      // ✅ 3. Clear all storage
+      try {
+        localStorage.clear();
+        sessionStorage.clear();
+        console.log("✅ Storage cleared");
+      } catch (storageError) {
+        console.error("Error clearing storage:", storageError);
+      }
+
+      // ✅ 4. Force a hard reload to clear everything
+      // استخدام setTimeout لضمان اكتمال العمليات السابقة
+      setTimeout(() => {
+        window.location.href = "/";
+      }, 100);
 
       return { error };
     } catch (error) {
       console.error("Unexpected error during sign out:", error);
+      // Force reload anyway
+      setTimeout(() => {
+        window.location.href = "/";
+      }, 100);
       return { error };
     }
   };
