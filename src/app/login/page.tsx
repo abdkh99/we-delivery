@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
@@ -15,6 +15,18 @@ export default function LoginPage() {
   const [success, setSuccess] = useState("");
   const router = useRouter();
   const supabase = createClient();
+
+  // ✅ التحقق من تسجيل الدخول الحالي
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        // المستخدم مسجل دخول بالفعل، توجيه للصفحة الرئيسية
+        router.replace("/");
+      }
+    };
+    checkAuth();
+  }, [supabase, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,25 +51,25 @@ export default function LoginPage() {
       // Generate email from username (same as signup)
       const generatedEmail = `${username.toLowerCase()}@estore.local`;
 
-      const { data, error } = await supabase.auth.signInWithPassword({
+      const { data, error: signInError } = await supabase.auth.signInWithPassword({
         email: generatedEmail,
         password,
       });
 
-      if (error) {
+      if (signInError) {
         // Better error messages
-        console.error("Login error details:", error);
+        console.error("Login error details:", signInError);
 
-        if (error.message.includes("Invalid login credentials")) {
+        if (signInError.message.includes("Invalid login credentials")) {
           setError("اسم المستخدم أو كلمة المرور غير صحيحة");
-        } else if (error.message.includes("Email not confirmed")) {
+        } else if (signInError.message.includes("Email not confirmed")) {
           setError(
             "⚠️ البريد الإلكتروني غير مؤكد. يرجى الاتصال بالدعم الفني أو تعطيل تأكيد البريد من إعدادات Supabase"
           );
-        } else if (error.message.includes("User not found")) {
+        } else if (signInError.message.includes("User not found")) {
           setError("المستخدم غير موجود. يرجى التسجيل أولاً");
         } else {
-          setError(`فشل تسجيل الدخول: ${error.message}`);
+          setError(`فشل تسجيل الدخول: ${signInError.message}`);
         }
         setLoading(false);
         return;
@@ -66,12 +78,13 @@ export default function LoginPage() {
       if (data.user) {
         setSuccess("تم تسجيل الدخول بنجاح! جاري التحويل...");
         
-        // ✅ الانتظار قليلاً قبل التوجيه لضمان تحديث الجلسة
-        await new Promise(resolve => setTimeout(resolve, 800));
+        // ✅ الانتظار لضمان حفظ الجلسة
+        await new Promise(resolve => setTimeout(resolve, 1000));
         
-        // ✅ استخدام window.location.href بدلاً من router.push
-        // لضمان إعادة تحميل كاملة للصفحة وتحديث AuthContext
-        window.location.href = "/";
+        // ✅ استخدام router.replace بدلاً من window.location
+        // replace يمنع المستخدم من الرجوع لصفحة تسجيل الدخول
+        router.replace("/");
+        router.refresh();
       }
     } catch (err: unknown) {
       console.error("Login error:", err);
