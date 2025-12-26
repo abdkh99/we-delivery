@@ -35,32 +35,33 @@ export async function GET() {
       );
     }
 
-    // فلترة المنتجات والـ variants حسب المخزون
-    const sanitizedProducts = (products || []).map((product) => {
-      // فلترة الـ variants النشطة واللي عندها مخزون
-      const activeVariants = (product.product_variants || []).filter(
-        (variant) => 
-          variant?.is_active !== false && 
-          (variant?.stock_estimate ?? 0) > 0
-      );
+    // ✅ فلترة المنتجات بشكل صحيح
+    const sanitizedProducts = (products || [])
+      .map((product) => {
+        // فلترة الـ variants النشطة واللي عندها مخزون > 0
+        const activeVariants = (product.product_variants || []).filter(
+          (variant) => 
+            variant?.is_active !== false && 
+            (variant?.stock_estimate ?? 0) > 0
+        );
 
-      return {
-        ...product,
-        product_variants: activeVariants,
-      };
-    })
-    // ✅ تحسين الفلترة: إخفاء المنتجات بناءً على حالة المخزون
-    .filter((product) => {
-      // إذا المنتج عنده variants (منتج رئيسي مع نكهات)
-      if (product.has_variants || product.is_master_product) {
-        // أظهر المنتج فقط إذا كان عنده variants متاحة
-        return product.product_variants.length > 0;
-      }
-      
-      // إذا المنتج عادي بدون variants
-      // ✅ تأكد أن المخزون أكبر من 0 AND المنتج نشط
-      return (product.stock_estimate ?? 0) > 0 && product.is_active === true;
-    });
+        return {
+          ...product,
+          product_variants: activeVariants,
+        };
+      })
+      .filter((product) => {
+        // ✅ إذا المنتج master product (له variants)
+        if (product.has_variants === true || product.is_master_product === true) {
+          // أظهر المنتج فقط إذا كان عنده variants متاحة
+          return product.product_variants.length > 0;
+        }
+        
+        // ✅ إذا المنتج عادي (بدون variants)
+        // أظهر المنتج إذا المخزون > 0
+        // ملاحظة: لا نتحقق من is_active هنا لأننا تحققنا منها بالفلتر الأولي
+        return (product.stock_estimate ?? 0) > 0;
+      });
 
     return NextResponse.json(
       { products: sanitizedProducts },
