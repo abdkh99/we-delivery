@@ -100,7 +100,14 @@ export default function ProductsPage() {
         normalizedName.includes(query) || normalizedDescription.includes(query);
       const matchesCategory =
         !selectedCategory || product.category === selectedCategory;
-      return matchesSearch && matchesCategory;
+      
+      // ✅ إخفاء المنتجات يلي stock = 0
+      const hasVariants = (product as ProductWithVariants).product_variants && (product as ProductWithVariants).product_variants!.length > 0;
+      const hasStock = hasVariants 
+        ? (product as ProductWithVariants).product_variants!.some(v => v.is_active && (v.stock_estimate || 0) > 0)
+        : (product.stock_estimate || 0) > 0;
+      
+      return matchesSearch && matchesCategory && hasStock;
     });
 
     const sorted = [...base];
@@ -412,10 +419,9 @@ export default function ProductsPage() {
                         className="w-full px-3 py-2 border border-gray-200 rounded-2xl text-sm text-gray-900 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-500 font-medium"
                       >
                         <option value="">🎨 اختر النكهة</option>
-                        {productWithVariants.product_variants!.map((variant) => (
+                        {productWithVariants.product_variants!.filter(v => v.is_active && (v.stock_estimate || 0) > 0).map((variant) => (
                           <option key={variant.id} value={variant.id}>
                             {variant.variant_name} - {formatCurrency(variant.price)}
-                            {(variant.stock_estimate || 0) === 0 ? " (غير متوفر)" : ""}
                           </option>
                         ))}
                       </select>
