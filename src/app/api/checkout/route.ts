@@ -1,10 +1,11 @@
 // ==========================================
-// FIXED CHECKOUT API - Uses Service Role
+// FIXED CHECKOUT API - Better Auth Handling
 // ==========================================
 
 import { createClient } from "@/lib/supabase/server";
 import { getServiceSupabaseClient } from "@/lib/supabase/service";
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 
 // Utility functions
 function calculateDeliveryFee(distance: number, totalPrice: number): number {
@@ -37,24 +38,67 @@ export async function POST(request: Request) {
     console.log("🚀 CHECKOUT API STARTED");
     console.log("===========================================\n");
 
-    // 1. التحقق من المصادقة باستخدام user client
+    // 1. فحص الـ cookies أولاً
+    console.log("🍪 Checking cookies...");
+    const cookieStore = await cookies();
+    const allCookies = cookieStore.getAll();
+    console.log("Total cookies:", allCookies.length);
+    
+    const authCookies = allCookies.filter(c => 
+      c.name.includes('sb-') || c.name.includes('auth')
+    );
+    console.log("Auth-related cookies:", authCookies.map(c => c.name).join(", "));
+
+    if (authCookies.length === 0) {
+      console.error("❌ No auth cookies found!");
+      return NextResponse.json(
+        { 
+          error: "الجلسة غير موجودة", 
+          message: "يرجى تسجيل الخروج ثم الدخول مرة أخرى",
+          debug: "NO_AUTH_COOKIES"
+        },
+        { status: 401 }
+      );
+    }
+
+    // 2. التحقق من المصادقة
+    console.log("🔐 Authenticating user...");
     const userSupabase = await createClient();
+    
     const {
       data: { user },
       error: authError,
     } = await userSupabase.auth.getUser();
 
-    if (authError || !user) {
-      console.error("❌ Auth failed:", authError?.message);
+    if (authError) {
+      console.error("❌ Auth error:", authError.message);
+      console.error("   Error code:", authError.status);
       return NextResponse.json(
-        { error: "يرجى تسجيل الدخول أولاً" },
+        { 
+          error: "خطأ في المصادقة", 
+          message: authError.message,
+          debug: "AUTH_ERROR"
+        },
+        { status: 401 }
+      );
+    }
+
+    if (!user) {
+      console.error("❌ No user found");
+      return NextResponse.json(
+        { 
+          error: "المستخدم غير موجود", 
+          message: "يرجى تسجيل الخروج ثم الدخول مرة أخرى",
+          debug: "NO_USER"
+        },
         { status: 401 }
       );
     }
 
     console.log("✅ User authenticated:", user.id);
+    console.log("   Email:", user.email);
 
-    // 2. استخدام service role client لباقي العمليات
+    // 3. استخدام service role client لباقي العمليات
     const supabase = getServiceSupabaseClient({ required: true });
     if (!supabase) {
       console.error("❌ Service role client not available");
@@ -64,7 +108,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // 3. تحليل البيانات
+    // 4. تحليل البيانات
     let body;
     try {
       body = await request.json();
@@ -77,7 +121,7 @@ export async function POST(request: Request) {
 
     const { items, deliveryAddress, deliveryLat, deliveryLng, notes } = body;
 
-    // 4. التحقق الأساسي
+    // 5. التحقق الأساسي
     if (!items || !Array.isArray(items) || items.length === 0) {
       console.error("❌ No items in cart");
       return NextResponse.json({ error: "السلة فارغة" }, { status: 400 });
@@ -93,7 +137,7 @@ export async function POST(request: Request) {
 
     console.log("✅ Basic validation passed");
 
-    // 5. التحقق من المنتجات (بدون التحقق من المخزون هنا)
+    // 6. التحقق من المنتجات
     console.log("\n🔍 Verifying products...");
     const productIds = items.map((item) => item?.product?.id).filter((id) => id);
 
@@ -137,7 +181,7 @@ export async function POST(request: Request) {
 
     console.log("✅ All products verified and active");
 
-    // 6. التحقق من المخزون (مع دعم كامل للـ variants)
+    // 7. التحقق من المخزون (مع دعم كامل للـ variants)
     console.log("\n📊 Checking stock...");
     for (const item of items) {
       const dbProduct = dbProducts.find((p) => p.id === item.product.id);
@@ -222,7 +266,7 @@ export async function POST(request: Request) {
 
     console.log("\n✅ Stock available for all items");
 
-    // 7. حساب الإجماليات
+    // 8. حساب الإجماليات
     console.log("\n💰 Calculating totals...");
     const totalPrice = items.reduce(
       (sum, item) => sum + item.product.price * item.quantity,
@@ -237,7 +281,7 @@ export async function POST(request: Request) {
     console.log("Commission:", platformCommission);
     console.log("Grand Total:", totalPrice + deliveryFee + platformCommission);
 
-    // 8. التحقق من الدفع
+    // 9. التحقق من الدفع
     console.log("\n💳 Validating payment...");
     const itemsForValidation = items.map((item) => ({
       product_id: item.product.id,
@@ -283,7 +327,7 @@ export async function POST(request: Request) {
     console.log("Cash amount:", cashAmount);
     console.log("Payment method:", paymentMethod);
 
-    // 9. إنشاء الطلب
+    // 10. إنشاء الطلب
     console.log("\n📝 Creating order...");
     const orderData = {
       user_id: user.id,
@@ -321,7 +365,7 @@ export async function POST(request: Request) {
 
     console.log("✅ Order created:", order.id);
 
-    // 10. إنشاء عناصر الطلب
+    // 11. إنشاء عناصر الطلب
     console.log("\n📦 Creating order items...");
     const orderItems = items.map((item) => {
       const dbProduct = dbProducts.find((p) => p.id === item.product.id);
@@ -356,7 +400,7 @@ export async function POST(request: Request) {
 
     console.log("✅ Order items created:", createdItems?.length || 0);
 
-    // 11. خصم النقاط
+    // 12. خصم النقاط
     if (pointsToDeduct > 0) {
       console.log("\n💎 Deducting points:", pointsToDeduct);
       const { data: deductResult, error: deductError } = await supabase.rpc(
@@ -385,7 +429,7 @@ export async function POST(request: Request) {
       console.log("✅ Points deducted successfully");
     }
 
-    // 12. تحديث المخزون
+    // 13. تحديث المخزون
     console.log("\n📊 Updating stock...");
     for (const item of items) {
       const dbProduct = dbProducts.find((p) => p.id === item.product.id);
@@ -429,7 +473,7 @@ export async function POST(request: Request) {
 
     console.log("✅ Stock updated");
 
-    // 13. النجاح!
+    // 14. النجاح!
     const duration = Date.now() - startTime;
     const potentialPoints = cashAmount > 0 ? calculateLoyaltyPoints(cashAmount) : 0;
 
