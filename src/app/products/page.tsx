@@ -118,6 +118,42 @@ export default function ProductsPage() {
     return sorted;
   }, [products, searchTerm, selectedCategory, sortOption]);
 
+  // 🔧 دالة مساعدة لحساب حالة المخزون والزر
+  const getProductStockStatus = (product: ProductWithVariants) => {
+    const hasVariants = product.product_variants && product.product_variants.length > 0;
+    const selectedVariantId = selectedVariants[product.id];
+    
+    // للمنتجات بدون نكهات
+    if (!hasVariants) {
+      const stock = product.stock_estimate ?? 0;
+      return {
+        currentStock: stock,
+        isOutOfStock: stock === 0,
+        isVariantSelected: false,
+        hasVariants: false,
+      };
+    }
+    
+    // للمنتجات بنكهات - لم يتم اختيار نكهة
+    if (!selectedVariantId) {
+      return {
+        currentStock: 0,
+        isOutOfStock: false,
+        isVariantSelected: false,
+        hasVariants: true,
+      };
+    }
+    
+    // للمنتجات بنكهات - تم اختيار نكهة
+    const stock = variantStocks[product.id] ?? 0;
+    return {
+      currentStock: stock,
+      isOutOfStock: stock === 0,
+      isVariantSelected: true,
+      hasVariants: true,
+    };
+  };
+
   if (isLoading && !data) {
     return (
       <div className="min-h-screen bg-gray-50">
@@ -244,20 +280,8 @@ export default function ProductsPage() {
               const productWithVariants = product as ProductWithVariants;
               const hasVariants = productWithVariants.product_variants && productWithVariants.product_variants.length > 0;
               
-              // ✅ حساب stock المنتج/النكهة الحالية
-              let currentStock = product.stock_estimate;
-              let isVariantOutOfStock = false;
-              
-              if (hasVariants) {
-                const selectedVariantId = selectedVariants[product.id];
-                if (selectedVariantId) {
-                  const selectedVariant = productWithVariants.product_variants!.find((v) => v.id === selectedVariantId);
-                  if (selectedVariant) {
-                    currentStock = selectedVariant.stock_estimate || 0;
-                    isVariantOutOfStock = currentStock === 0;
-                  }
-                }
-              }
+              // ✅ استخدام الدالة المساعدة لحساب حالة المخزون
+              const stockStatus = getProductStockStatus(productWithVariants);
 
               return (
                 <div
@@ -442,6 +466,15 @@ export default function ProductsPage() {
                             });
                             return;
                           }
+                        } else {
+                          // ✅ التحقق من المخزون للمنتجات بدون نكهات
+                          if ((product.stock_estimate || 0) === 0) {
+                            toast.error("المنتج غير متوفر ❌", {
+                              description: "هذا المنتج غير متوفر حالياً",
+                              icon: <XCircle className="h-5 w-5" />,
+                            });
+                            return;
+                          }
                         }
 
                         setAddingToCart(product.id);
@@ -487,25 +520,25 @@ export default function ProductsPage() {
                       }}
                       disabled={
                         addingToCart === product.id ||
-                        (hasVariants
-                          ? !selectedVariants[product.id] || isVariantOutOfStock
-                          : currentStock === 0)
+                        (stockStatus.hasVariants
+                          ? !stockStatus.isVariantSelected || stockStatus.isOutOfStock
+                          : stockStatus.isOutOfStock)
                       }
                       className={`w-full py-3 rounded-2xl transition-all flex items-center justify-center gap-2 font-semibold text-sm ${
                         addingToCart === product.id ||
-                        (hasVariants
-                          ? !selectedVariants[product.id] || isVariantOutOfStock
-                          : currentStock === 0)
+                        (stockStatus.hasVariants
+                          ? !stockStatus.isVariantSelected || stockStatus.isOutOfStock
+                          : stockStatus.isOutOfStock)
                           ? "bg-gray-200 text-gray-500 cursor-not-allowed opacity-60"
                           : "bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:from-blue-700 hover:to-blue-800"
                       }`}
                       title={
-                        hasVariants && !selectedVariants[product.id]
+                        stockStatus.hasVariants && !stockStatus.isVariantSelected
                           ? "الرجاء اختيار النكهة أولاً"
-                          : isVariantOutOfStock
-                          ? "النكهة المختارة غير متوفرة حالياً"
-                          : currentStock === 0
-                          ? "غير متوفر حالياً"
+                          : stockStatus.isOutOfStock
+                          ? stockStatus.hasVariants
+                            ? "النكهة المختارة غير متوفرة حالياً"
+                            : "غير متوفر حالياً"
                           : "إضافة إلى السلة"
                       }
                     >
@@ -514,12 +547,12 @@ export default function ProductsPage() {
                           <LoadingSpinner size="small" color="white" />
                           <span>جاري الإضافة...</span>
                         </>
-                      ) : hasVariants && !selectedVariants[product.id] ? (
+                      ) : stockStatus.hasVariants && !stockStatus.isVariantSelected ? (
                         <>
                           <AlertCircle className="h-4 w-4" />
                           <span>اختر النكهة أولاً</span>
                         </>
-                      ) : isVariantOutOfStock || currentStock === 0 ? (
+                      ) : stockStatus.isOutOfStock ? (
                         <>
                           <XCircle className="h-4 w-4" />
                           <span>غير متوفر</span>
