@@ -7,6 +7,7 @@ import {
   useState,
   useCallback,
   useMemo,
+  useRef,
 } from "react";
 import { User } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
@@ -29,6 +30,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const supabase = useMemo(() => createClient(), []);
+  const isMountedRef = useRef(true);
+  const retryCountRef = useRef(0);
+  const maxRetries = 3;
 
   const fetchProfile = useCallback(
     async (userId: string) => {
@@ -48,14 +52,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           .maybeSingle();
 
         if (error) {
-          try {
-            console.error(
-              "Error fetching profile from Supabase:",
-              JSON.stringify(error, null, 2)
-            );
-          } catch {
-            console.error("Error fetching profile from Supabase:", error);
-          }
+          console.error("Error fetching profile:", error);
           return;
         }
 
@@ -80,12 +77,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             return;
           }
 
-          if (newProfile) {
+          if (newProfile && isMountedRef.current) {
             setProfile(newProfile);
-            console.log("✅ Profile created successfully:", newProfile);
+            console.log("✅ Profile created successfully");
           }
         } else {
-          setProfile(data);
+          if (isMountedRef.current) {
+            setProfile(data);
+          }
         }
       } catch (error) {
         console.error("Unexpected error in fetchProfile:", error);
@@ -94,47 +93,130 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     [supabase]
   );
 
-  useEffect(() => {
-    const getUser = async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      setUser(user);
-
-      if (user) {
-        await fetchProfile(user.id);
+  // ✅ دالة للحصول على المستخدم مع retry logic
+  const getUserWithRetry = useCallback(async (): Promise<User | null> => {
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        console.log(`🔄 Attempt ${attempt + 1}/${maxRetries + 1} to get user...`);
+        
+        const { data: { user }, error } = await supabase.auth.getUser();
+        
+        if (error) {
+          console.error(`❌ Attempt ${attempt + 1} failed:`, error.message);
+          
+          // إذا الخطأ network-related وعندنا محاولات باقية
+          if (attempt < maxRetries && (
+            error.message.includes('fetch') || 
+            error.message.includes('network') ||
+            error.message.includes('timeout')
+          )) {
+            // انتظر قبل المحاولة التالية (exponential backoff)
+            const delay = Math.min(1000 * Math.pow(2, attempt), 5000);
+            console.log(`⏳ Waiting ${delay}ms before retry...`);
+            await new Promise(resolve => setTimeout(resolve, delay));
+            continue;
+          }
+          
+          throw error;
+        }
+        
+        if (user) {
+          console.log(`✅ User fetched successfully on attempt ${attempt + 1}`);
+          retryCountRef.current = 0;
+          return user;
+        }
+        
+        // لا يوجد user ولا يوجد error - المستخدم غير مسجل دخول
+        console.log("ℹ️ No user session found");
+        return null;
+        
+      } catch (error) {
+        console.error(`❌ Error in attempt ${attempt + 1}:`, error);
+        
+        // آخر محاولة - نفشل
+        if (attempt === maxRetries) {
+          console.error("❌ All retry attempts failed");
+          return null;
+        }
       }
+    }
+    
+    return null;
+  }, [supabase]);
 
-      setLoading(false);
-    };
+  useEffect(() => {
+    isMountedRef.current = true;
+    let authSubscription: { unsubscribe: () => void } | null = null;
 
-    getUser();
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(
-      async (_event: unknown, session: { user?: User | null } | null) => {
-        const newUser = (session?.user ?? null) as User | null;
-        setUser(newUser);
-
-        if (newUser) {
-          await fetchProfile(newUser.id);
-        } else {
-          setProfile(null);
+    const initializeAuth = async () => {
+      try {
+        console.log("🔐 Initializing auth...");
+        
+        // ✅ محاولة الحصول على المستخدم مع retry
+        const currentUser = await getUserWithRetry();
+        
+        if (isMountedRef.current) {
+          setUser(currentUser);
+          
+          if (currentUser) {
+            console.log("✅ User found:", currentUser.id);
+            await fetchProfile(currentUser.id);
+          } else {
+            console.log("ℹ️ No user session");
+            setProfile(null);
+          }
+          
+          setLoading(false);
         }
 
-        setLoading(false);
+        // ✅ الاشتراك في تغييرات الـ auth
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(
+          async (_event, session) => {
+            console.log("🔄 Auth state changed:", _event);
+            
+            const newUser = session?.user ?? null;
+            
+            if (isMountedRef.current) {
+              setUser(newUser);
+              
+              if (newUser) {
+                console.log("✅ New user session:", newUser.id);
+                await fetchProfile(newUser.id);
+              } else {
+                console.log("ℹ️ User session ended");
+                setProfile(null);
+              }
+              
+              setLoading(false);
+            }
+          }
+        );
+        
+        authSubscription = subscription;
+        
+      } catch (error) {
+        console.error("❌ Error initializing auth:", error);
+        if (isMountedRef.current) {
+          setLoading(false);
+        }
       }
-    );
+    };
 
-    return () => subscription.unsubscribe();
-  }, [fetchProfile, supabase]);
+    initializeAuth();
+
+    return () => {
+      isMountedRef.current = false;
+      if (authSubscription) {
+        authSubscription.unsubscribe();
+      }
+    };
+  }, [fetchProfile, supabase, getUserWithRetry]);
 
   const signOut = async () => {
     try {
       console.log("🔴 Starting sign out process...");
       
-      // ✅ 1. Sign out from Supabase first
+      // ✅ 1. Sign out from Supabase
       const { error } = await supabase.auth.signOut();
 
       if (error) {
@@ -148,17 +230,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setProfile(null);
       console.log("✅ Local state cleared");
 
-      // ✅ 3. Clear all storage
+      // ✅ 3. Clear cart from localStorage only (keep auth data for Supabase)
       try {
-        localStorage.clear();
-        sessionStorage.clear();
-        console.log("✅ Storage cleared");
+        localStorage.removeItem('cart');
+        console.log("✅ Cart cleared from localStorage");
       } catch (storageError) {
-        console.error("Error clearing storage:", storageError);
+        console.error("Error clearing cart:", storageError);
       }
 
-      // ✅ 4. Force a hard reload to clear everything
-      // استخدام setTimeout لضمان اكتمال العمليات السابقة
+      // ✅ 4. Redirect to home
       setTimeout(() => {
         window.location.href = "/";
       }, 100);
