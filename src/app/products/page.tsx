@@ -303,84 +303,100 @@ export default function ProductsPage() {
                             {formatCurrency(selectedVariant?.price || product.price)}
                           </p>
                         </div>
+                        
+                        {/* Stock indicator */}
+                        {hasVariants && selectedVariant ? (
+                          <span
+                            className={`text-xs font-semibold px-3 py-1 rounded-full flex items-center gap-1 ${
+                              (selectedVariant.stock_estimate || 0) > 0
+                                ? "bg-green-50 text-green-600"
+                                : "bg-red-50 text-red-600"
+                            }`}
+                          >
+                            {(selectedVariant.stock_estimate || 0) > 0 ? (
+                              <>
+                                <CheckCircle className="w-3 h-3" />
+                                متوفر ({selectedVariant.stock_estimate})
+                              </>
+                            ) : (
+                              <>
+                                <XCircle className="w-3 h-3" />
+                                غير متوفر
+                              </>
+                            )}
+                          </span>
+                        ) : !hasVariants ? (
+                          <span
+                            className={`text-xs font-semibold px-3 py-1 rounded-full ${
+                              (product.stock_estimate || 0) > 0
+                                ? "bg-green-50 text-green-600"
+                                : "bg-red-50 text-red-600"
+                            }`}
+                          >
+                            {(product.stock_estimate || 0) > 0
+                              ? `متوفر (${product.stock_estimate})`
+                              : "غير متوفر"}
+                          </span>
+                        ) : null}
                       </div>
                     </div>
                   </Link>
 
                   <div className="px-3 sm:px-4 pb-4 flex flex-col gap-3 mt-auto w-full">
-                    {/* RADIO BUTTONS FOR VARIANTS */}
+                    {/* DROPDOWN FOR VARIANTS */}
                     {hasVariants && (
-                      <div className="bg-gray-50 rounded-2xl p-3 space-y-2">
-                        <p className="text-sm font-semibold text-gray-700 mb-2">
-                          🎨 اختر النكهة:
-                        </p>
-                        <div className="space-y-2">
+                      <div className="relative">
+                        <select
+                          value={selectedVariants[product.id] || ""}
+                          onChange={(e) => {
+                            const variantId = e.target.value;
+                            setSelectedVariants((prev) => ({
+                              ...prev,
+                              [product.id]: variantId,
+                            }));
+                            if (variantId) {
+                              const selectedVariant = productVariants.find(
+                                (v) => v.id === variantId
+                              );
+                              setVariantImages((prev) => ({
+                                ...prev,
+                                [product.id]: selectedVariant?.image_url || null,
+                              }));
+                            } else {
+                              setVariantImages((prev) => ({
+                                ...prev,
+                                [product.id]: null,
+                              }));
+                            }
+                          }}
+                          className="w-full px-4 py-3 border-2 border-gray-200 rounded-2xl text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-500 font-medium appearance-none cursor-pointer hover:border-blue-300 transition-colors"
+                          style={{
+                            backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236b7280'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`,
+                            backgroundRepeat: "no-repeat",
+                            backgroundPosition: "left 0.75rem center",
+                            backgroundSize: "1.25rem",
+                            paddingLeft: "2.5rem",
+                          }}
+                        >
+                          <option value="">🎨 اختر النكهة</option>
                           {productVariants.map((variant) => {
                             const isOutOfStock = (variant.stock_estimate || 0) === 0;
-                            const isSelected = selectedVariantId === variant.id;
-
                             return (
-                              <label
+                              <option
                                 key={variant.id}
-                                className={`flex items-center gap-3 p-3 rounded-xl border-2 transition-all cursor-pointer ${
-                                  isOutOfStock
-                                    ? "bg-gray-100 border-gray-200 opacity-60 cursor-not-allowed"
-                                    : isSelected
-                                    ? "bg-blue-50 border-blue-500"
-                                    : "bg-white border-gray-200 hover:border-blue-300"
-                                }`}
+                                value={variant.id}
+                                disabled={isOutOfStock}
+                                style={{
+                                  color: isOutOfStock ? "#9ca3af" : "#111827",
+                                  backgroundColor: isOutOfStock ? "#f3f4f6" : "white",
+                                }}
                               >
-                                <input
-                                  type="radio"
-                                  name={`variant-${product.id}`}
-                                  value={variant.id}
-                                  checked={isSelected}
-                                  disabled={isOutOfStock}
-                                  onChange={(e) => {
-                                    if (!isOutOfStock) {
-                                      setSelectedVariants((prev) => ({
-                                        ...prev,
-                                        [product.id]: e.target.value,
-                                      }));
-                                      setVariantImages((prev) => ({
-                                        ...prev,
-                                        [product.id]: variant.image_url,
-                                      }));
-                                    }
-                                  }}
-                                  className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500 disabled:cursor-not-allowed"
-                                />
-                                <div className="flex-1">
-                                  <div className="flex items-center justify-between">
-                                    <span
-                                      className={`font-medium text-sm ${
-                                        isOutOfStock
-                                          ? "text-gray-400"
-                                          : "text-gray-900"
-                                      }`}
-                                    >
-                                      {variant.variant_name}
-                                    </span>
-                                    {isOutOfStock ? (
-                                      <span className="flex items-center gap-1 text-xs font-semibold text-red-600">
-                                        <XCircle className="w-3 h-3" />
-                                        غير متوفر
-                                      </span>
-                                    ) : (
-                                      <span className="flex items-center gap-1 text-xs font-medium text-green-600">
-                                        <CheckCircle className="w-3 h-3" />
-                                        متوفر ({variant.stock_estimate})
-                                      </span>
-                                    )}
-                                  </div>
-                                  <span className="text-xs text-gray-500">
-                                    {formatCurrency(variant.price)}
-                                  </span>
-                                </div>
-                              </label>
+                                {variant.variant_name} - {formatCurrency(variant.price)}
+                                {isOutOfStock ? " (غير متوفر)" : ` (متوفر: ${variant.stock_estimate})`}
+                              </option>
                             );
                           })}
-                        </div>
+                        </select>
                       </div>
                     )}
 
@@ -404,7 +420,7 @@ export default function ProductsPage() {
                         try {
                           if (hasVariants) {
                             if (!selectedVariantId) {
-                              toast.error("من فضلك اختر النكهة ", {
+                              toast.error("من فضلك اختر النكهة", {
                                 description: "يجب اختيار نكهة قبل الإضافة للسلة",
                                 icon: <AlertCircle className="h-5 w-5" />,
                               });
