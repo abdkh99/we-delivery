@@ -134,7 +134,7 @@ export default function CartPage() {
     const checkoutData = {
       items: items.map((item) => ({
         product: {
-          id: item.product.id,
+          id: item.masterProductId || item.product.id, // ✅ Use masterProductId if available
           price: item.product.price,
           stock_estimate: item.product.stock_estimate,
         },
@@ -276,8 +276,7 @@ export default function CartPage() {
                   return (
                     <div
                       key={`${item.product.id}-${item.variantId || "default"}`}
-                      className="p-4 sm:p-6"
-                    >
+                      className="p-4 sm:p-6">
                       <div className="flex flex-col sm:flex-row sm:items-start gap-4">
                         <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0 mx-auto sm:mx-0">
                           {item.product.image_url ? (
