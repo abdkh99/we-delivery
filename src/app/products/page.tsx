@@ -16,10 +16,8 @@ import {
   CheckCircle,
   AlertCircle,
   LogIn,
-  Sparkles,
-  Star,
   TrendingUp,
-  Layers,
+  XCircle,
 } from "lucide-react";
 import { useCart } from "@/contexts/CartContext";
 import { useAuth } from "@/contexts/AuthContext";
@@ -30,7 +28,6 @@ import { ProductsGridSkeleton } from "@/components/Skeleton";
 
 type Product = Database["public"]["Tables"]["products"]["Row"];
 
-// تعريف نوع منفصل للنكهات
 interface ProductVariant {
   id: string;
   master_product_id: string;
@@ -47,7 +44,6 @@ interface ProductVariant {
   price_updated_at?: string | null;
 }
 
-// تعريف المنتج مع النكهات
 interface ProductWithVariants extends Product {
   product_variants?: ProductVariant[];
 }
@@ -56,7 +52,6 @@ export default function ProductsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("");
   const [sortOption, setSortOption] = useState<"newest" | "price_asc" | "price_desc">("newest");
-  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [addingToCart, setAddingToCart] = useState<string | null>(null);
   const [selectedVariants, setSelectedVariants] = useState<Record<string, string>>({});
   const [variantImages, setVariantImages] = useState<Record<string, string | null>>({});
@@ -120,20 +115,6 @@ export default function ProductsPage() {
     return sorted;
   }, [products, searchTerm, selectedCategory, sortOption]);
 
-  const featuredStats = useMemo(() => {
-    const totalProducts = products.length;
-    const variantCount = products.reduce(
-      (count, product) => count + ((product as ProductWithVariants).product_variants?.length || 0),
-      0
-    );
-    const stockedProducts = products.filter((p) => (p.stock_estimate ?? 0) > 0).length;
-    return {
-      totalProducts,
-      variantCount,
-      stockedProducts,
-    };
-  }, [products]);
-
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50">
@@ -176,8 +157,6 @@ export default function ProductsPage() {
       <Navigation />
 
       <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8 py-6 lg:py-10 space-y-6">
-
-
         {/* Filters */}
         <section className="bg-white rounded-3xl border border-gray-100 shadow-sm p-4 sm:p-6 space-y-4">
           <div className="flex flex-col lg:flex-row gap-4">
@@ -221,10 +200,6 @@ export default function ProductsPage() {
                 </select>
                 <TrendingUp className="absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 pointer-events-none" />
               </div>
-
-              <div className="flex rounded-2xl border border-gray-200 overflow-hidden">
-               
-              </div>
             </div>
           </div>
 
@@ -255,50 +230,43 @@ export default function ProductsPage() {
             </p>
           </div>
         ) : (
-          <div
-            className={
-              viewMode === "grid"
-                ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6"
-                : "space-y-4"
-            }
-          >
-            {filteredProducts.map((product) => (
-              <div
-                key={product.id}
-                className={`bg-white rounded-3xl border border-transparent hover:border-blue-200 shadow-sm hover:shadow-lg transition-all duration-300 flex ${
-                  viewMode === "grid" ? "flex-col" : "flex-row gap-4"
-                }`}
-              >
-                <Link
-                  href={`/products/${product.id}`}
-                  className={`block ${viewMode === "grid" ? "flex flex-col" : "flex flex-row gap-6"}`}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+            {filteredProducts.map((product) => {
+              const productVariants = (product as ProductWithVariants).product_variants || [];
+              const hasVariants = productVariants.length > 0;
+              const selectedVariantId = selectedVariants[product.id];
+              const selectedVariant = hasVariants
+                ? productVariants.find((v) => v.id === selectedVariantId)
+                : null;
+
+              return (
+                <div
+                  key={product.id}
+                  className="bg-white rounded-3xl border border-transparent hover:border-blue-200 shadow-sm hover:shadow-lg transition-all duration-300 flex flex-col"
                 >
-                  <div
-                    className={`relative overflow-hidden rounded-2xl ${
-                      viewMode === "grid" ? "aspect-square" : "w-40 h-40"
-                    } bg-gradient-to-br from-gray-50 to-gray-100`}
+                  <Link
+                    href={`/products/${product.id}`}
+                    className="block flex flex-col"
                   >
-                    {variantImages[product.id] || product.image_url ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={
-                          variantImages[product.id] || product.image_url || ""
-                        }
-                        alt={product.name}
-                        loading="lazy"
-                        className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 hover:scale-105"
-                      />
-                    ) : (
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <Package className="h-12 w-12 text-gray-400" />
-                      </div>
-                    )}
-                    <div className="absolute top-3 right-3 flex gap-2">
-                      <div className="bg-white/80 backdrop-blur px-3 py-1 rounded-full text-xs font-semibold text-blue-600">
-                        {getCategoryArabic(product.category)}
-                      </div>
-                      {(product as ProductWithVariants).product_variants &&
-                        (product as ProductWithVariants).product_variants!.length > 0 && (
+                    <div className="relative overflow-hidden rounded-2xl aspect-square bg-gradient-to-br from-gray-50 to-gray-100">
+                      {variantImages[product.id] || product.image_url ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={variantImages[product.id] || product.image_url || ""}
+                          alt={product.name}
+                          loading="lazy"
+                          className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 hover:scale-105"
+                        />
+                      ) : (
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <Package className="h-12 w-12 text-gray-400" />
+                        </div>
+                      )}
+                      <div className="absolute top-3 right-3 flex gap-2">
+                        <div className="bg-white/80 backdrop-blur px-3 py-1 rounded-full text-xs font-semibold text-blue-600">
+                          {getCategoryArabic(product.category)}
+                        </div>
+                        {hasVariants && (
                           <div className="bg-blue-600 text-white text-xs px-3 py-1 rounded-full font-medium flex items-center gap-1 shadow-sm">
                             <svg
                               className="w-3 h-3"
@@ -313,192 +281,255 @@ export default function ProductsPage() {
                                 d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"
                               />
                             </svg>
-                            <span>
-                              {
-                                (product as ProductWithVariants).product_variants!.length
-                              }{" "}
-                              نكهات
-                            </span>
+                            <span>{productVariants.length} نكهات</span>
                           </div>
                         )}
-                    </div>
-                  </div>
-
-                  <div className={`flex-1 ${viewMode === "grid" ? "mt-4 px-3 sm:px-4 pb-4" : ""}`}>
-                    <h3 className="font-bold text-gray-900 text-base sm:text-lg line-clamp-2">
-                      {product.name}
-                    </h3>
-
-                    <p className="text-sm text-gray-600 mt-2 line-clamp-2 min-h-[40px]">
-                      {product.description || "منتج طازج من موردينا المحليين."}
-                    </p>
-
-                    <div className="flex items-center justify-between mt-4">
-                      <div>
-                        <p className="text-xs text-gray-500">السعر الحالي</p>
-                        <p className="text-xl font-bold text-blue-600">
-                          {formatCurrency(product.price)}
-                        </p>
                       </div>
-
-                      <span
-                        className={`text-xs font-semibold px-3 py-1 rounded-full ${
-                          product.stock_estimate > 0
-                            ? "bg-green-50 text-green-600"
-                            : "bg-red-50 text-red-600"
-                        }`}
-                      >
-                        {product.stock_estimate > 0
-                          ? `متوفر (${product.stock_estimate})`
-                          : "غير متوفر حالياً"}
-                      </span>
                     </div>
-                  </div>
-                </Link>
 
-                <div className="px-3 sm:px-4 pb-4 flex flex-col gap-2 mt-auto w-full">
-                  {(product as ProductWithVariants).product_variants &&
-                  (product as ProductWithVariants).product_variants!.length > 0 ? (
-                    <select
-                      value={selectedVariants[product.id] || ""}
-                      onChange={(e) => {
-                        const variantId = e.target.value;
-                        setSelectedVariants((prev) => ({
-                          ...prev,
-                          [product.id]: variantId,
-                        }));
-                        if (variantId) {
-                          const selectedVariant = (
-                            product as ProductWithVariants
-                          ).product_variants!.find((v) => v.id === variantId);
-                          setVariantImages((prev) => ({
-                            ...prev,
-                            [product.id]: selectedVariant?.image_url || null,
-                          }));
-                        } else {
-                          setVariantImages((prev) => ({
-                            ...prev,
-                            [product.id]: null,
-                          }));
+                    <div className="flex-1 mt-4 px-3 sm:px-4 pb-4">
+                      <h3 className="font-bold text-gray-900 text-base sm:text-lg line-clamp-2">
+                        {product.name}
+                      </h3>
+
+                      <p className="text-sm text-gray-600 mt-2 line-clamp-2 min-h-[40px]">
+                        {product.description || "منتج طازج من موردينا المحليين."}
+                      </p>
+
+                      <div className="flex items-center justify-between mt-4">
+                        <div>
+                          <p className="text-xs text-gray-500">السعر</p>
+                          <p className="text-xl font-bold text-blue-600">
+                            {formatCurrency(selectedVariant?.price || product.price)}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </Link>
+
+                  <div className="px-3 sm:px-4 pb-4 flex flex-col gap-3 mt-auto w-full">
+                    {/* RADIO BUTTONS FOR VARIANTS */}
+                    {hasVariants && (
+                      <div className="bg-gray-50 rounded-2xl p-3 space-y-2">
+                        <p className="text-sm font-semibold text-gray-700 mb-2">
+                          🎨 اختر النكهة:
+                        </p>
+                        <div className="space-y-2">
+                          {productVariants.map((variant) => {
+                            const isOutOfStock = (variant.stock_estimate || 0) === 0;
+                            const isSelected = selectedVariantId === variant.id;
+
+                            return (
+                              <label
+                                key={variant.id}
+                                className={`flex items-center gap-3 p-3 rounded-xl border-2 transition-all cursor-pointer ${
+                                  isOutOfStock
+                                    ? "bg-gray-100 border-gray-200 opacity-60 cursor-not-allowed"
+                                    : isSelected
+                                    ? "bg-blue-50 border-blue-500"
+                                    : "bg-white border-gray-200 hover:border-blue-300"
+                                }`}
+                              >
+                                <input
+                                  type="radio"
+                                  name={`variant-${product.id}`}
+                                  value={variant.id}
+                                  checked={isSelected}
+                                  disabled={isOutOfStock}
+                                  onChange={(e) => {
+                                    if (!isOutOfStock) {
+                                      setSelectedVariants((prev) => ({
+                                        ...prev,
+                                        [product.id]: e.target.value,
+                                      }));
+                                      setVariantImages((prev) => ({
+                                        ...prev,
+                                        [product.id]: variant.image_url,
+                                      }));
+                                    }
+                                  }}
+                                  className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500 disabled:cursor-not-allowed"
+                                />
+                                <div className="flex-1">
+                                  <div className="flex items-center justify-between">
+                                    <span
+                                      className={`font-medium text-sm ${
+                                        isOutOfStock
+                                          ? "text-gray-400"
+                                          : "text-gray-900"
+                                      }`}
+                                    >
+                                      {variant.variant_name}
+                                    </span>
+                                    {isOutOfStock ? (
+                                      <span className="flex items-center gap-1 text-xs font-semibold text-red-600">
+                                        <XCircle className="w-3 h-3" />
+                                        غير متوفر
+                                      </span>
+                                    ) : (
+                                      <span className="flex items-center gap-1 text-xs font-medium text-green-600">
+                                        <CheckCircle className="w-3 h-3" />
+                                        متوفر ({variant.stock_estimate})
+                                      </span>
+                                    )}
+                                  </div>
+                                  <span className="text-xs text-gray-500">
+                                    {formatCurrency(variant.price)}
+                                  </span>
+                                </div>
+                              </label>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* ADD TO CART BUTTON */}
+                    <button
+                      onClick={async () => {
+                        if (!user) {
+                          toast.error("يجب تسجيل الدخول أولاً! 🔐", {
+                            description: "سجل دخولك للمتابعة إلى سلة التسوق",
+                            icon: <LogIn className="h-5 w-5" />,
+                            action: {
+                              label: "تسجيل الدخول",
+                              onClick: () => router.push("/login"),
+                            },
+                            duration: 5000,
+                          });
+                          return;
                         }
-                      }}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-2xl text-sm text-gray-900 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-500 font-medium"
-                    >
-                      <option value="">🎨 اختر النكهة</option>
-                      {(product as ProductWithVariants).product_variants!.map(
-                        (variant) => (
-                          <option key={variant.id} value={variant.id}>
-                            {variant.variant_name} - {formatCurrency(variant.price)}
-                          </option>
-                        )
-                      )}
-                    </select>
-                  ) : (
-                    <Link
-                      href={`/products/${product.id}`}
-                      className="w-full bg-gray-100 text-gray-800 py-3 px-4 rounded-2xl hover:bg-gray-200 transition-colors text-center font-medium text-sm"
-                    >
-                      عرض التفاصيل
-                    </Link>
-                  )}
 
-                  <button
-                    onClick={async () => {
-                      if (!user) {
-                        toast.error("يجب تسجيل الدخول أولاً! 🔐", {
-                          description: "سجل دخولك للمتابعة إلى سلة التسوق",
-                          icon: <LogIn className="h-5 w-5" />,
-                          action: {
-                            label: "تسجيل الدخول",
-                            onClick: () => router.push("/login"),
-                          },
-                          duration: 5000,
-                        });
-                        return;
-                      }
+                        setAddingToCart(product.id);
+                        try {
+                          if (hasVariants) {
+                            if (!selectedVariantId) {
+                              toast.error("من فضلك اختر النكهة ", {
+                                description: "يجب اختيار نكهة قبل الإضافة للسلة",
+                                icon: <AlertCircle className="h-5 w-5" />,
+                              });
+                              setAddingToCart(null);
+                              return;
+                            }
 
-                      setAddingToCart(product.id);
-                      try {
-                        const productWithVariants = product as ProductWithVariants;
-                        if (
-                          productWithVariants.product_variants &&
-                          productWithVariants.product_variants.length > 0
-                        ) {
-                          const selectedVariantId = selectedVariants[product.id];
-                          if (!selectedVariantId) {
-                            toast.error("من فضلك اختر النكهة ", {
-                              description: "يجب اختيار نكهة قبل الإضافة للسلة",
-                              icon: <AlertCircle className="h-5 w-5" />,
-                            });
-                            setAddingToCart(null);
-                            return;
-                          }
-                          const selectedVariant =
-                            productWithVariants.product_variants.find(
+                            const variant = productVariants.find(
                               (v) => v.id === selectedVariantId
                             );
-                          if (selectedVariant) {
+
+                            if (!variant) {
+                              toast.error("النكهة غير موجودة", {
+                                icon: <AlertCircle className="h-5 w-5" />,
+                              });
+                              setAddingToCart(null);
+                              return;
+                            }
+
+                            // CRITICAL: Check variant stock
+                            if ((variant.stock_estimate || 0) === 0) {
+                              toast.error("النكهة غير متوفرة حالياً", {
+                                description: "يرجى اختيار نكهة أخرى",
+                                icon: <XCircle className="h-5 w-5" />,
+                              });
+                              setAddingToCart(null);
+                              return;
+                            }
+
                             addItem(
                               {
                                 ...product,
-                                id: selectedVariant.id,
-                                name: `${product.name} - ${selectedVariant.variant_name}`,
-                                price: selectedVariant.price,
-                                stock_estimate:
-                                  selectedVariant.stock_estimate || 0,
-                                sku: selectedVariant.variant_sku,
-                                image_url:
-                                  selectedVariant.image_url || product.image_url,
+                                id: variant.id,
+                                name: `${product.name} - ${variant.variant_name}`,
+                                price: variant.price,
+                                stock_estimate: variant.stock_estimate || 0,
+                                sku: variant.variant_sku,
+                                image_url: variant.image_url || product.image_url,
                               },
                               1,
-                              selectedVariant.id
+                              variant.id
                             );
-                          }
-                        } else {
-                          addItem(product, 1);
-                        }
+                          } else {
+                            // Product without variants
+                            if ((product.stock_estimate || 0) === 0) {
+                              toast.error("المنتج غير متوفر حالياً", {
+                                icon: <XCircle className="h-5 w-5" />,
+                              });
+                              setAddingToCart(null);
+                              return;
+                            }
 
-                        toast.success("تم إضافة المنتج للسلة ✅", {
-                          description: `تم إضافة ${product.name} إلى سلة التسوق`,
-                          icon: <CheckCircle className="h-5 w-5" />,
-                          position: "bottom-right",
-                        });
-                      } catch {
-                        toast.error("فشل في إضافة المنتج ❌", {
-                          description: "يرجى المحاولة مرة أخرى",
-                          icon: <AlertCircle className="h-5 w-5" />,
-                        });
-                      } finally {
-                        setAddingToCart(null);
+                            addItem(product, 1);
+                          }
+
+                          toast.success("تم إضافة المنتج للسلة ✅", {
+                            description: `تم إضافة ${product.name} إلى سلة التسوق`,
+                            icon: <CheckCircle className="h-5 w-5" />,
+                            position: "bottom-right",
+                          });
+                        } catch {
+                          toast.error("فشل في إضافة المنتج ❌", {
+                            description: "يرجى المحاولة مرة أخرى",
+                            icon: <AlertCircle className="h-5 w-5" />,
+                          });
+                        } finally {
+                          setAddingToCart(null);
+                        }
+                      }}
+                      className={`w-full py-3 rounded-2xl transition-all flex items-center justify-center gap-2 font-semibold text-sm ${
+                        hasVariants && !selectedVariantId
+                          ? "bg-gray-200 text-gray-500 cursor-not-allowed"
+                          : hasVariants &&
+                            selectedVariant &&
+                            (selectedVariant.stock_estimate || 0) === 0
+                          ? "bg-red-100 text-red-600 cursor-not-allowed"
+                          : !hasVariants && (product.stock_estimate || 0) === 0
+                          ? "bg-red-100 text-red-600 cursor-not-allowed"
+                          : "bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:from-blue-700 hover:to-blue-800"
+                      }`}
+                      disabled={
+                        addingToCart === product.id ||
+                        (hasVariants && !selectedVariantId) ||
+                        (hasVariants &&
+                          selectedVariant &&
+                          (selectedVariant.stock_estimate || 0) === 0) ||
+                        (!hasVariants && (product.stock_estimate || 0) === 0)
                       }
-                    }}
-                    className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white py-3 rounded-2xl hover:from-blue-700 hover:to-blue-800 transition-all disabled:from-gray-200 disabled:to-gray-300 disabled:text-gray-500 flex items-center justify-center gap-2 font-semibold text-sm"
-                    disabled={
-                      product.stock_estimate === 0 || addingToCart === product.id
-                    }
-                  >
-                    {addingToCart === product.id ? (
-                      <>
-                        <LoadingSpinner size="small" color="white" />
-                        <span>جاري الإضافة...</span>
-                      </>
-                    ) : (
-                      <>
-                        <ShoppingCart className="h-4 w-4" />
-                        {product.stock_estimate > 0 ? "إضافة للسلة" : "غير متوفر"}
-                      </>
-                    )}
-                  </button>
+                    >
+                      {addingToCart === product.id ? (
+                        <>
+                          <LoadingSpinner size="small" color="white" />
+                          <span>جاري الإضافة...</span>
+                        </>
+                      ) : hasVariants && !selectedVariantId ? (
+                        <>
+                          <AlertCircle className="h-4 w-4" />
+                          اختر النكهة أولاً
+                        </>
+                      ) : hasVariants &&
+                        selectedVariant &&
+                        (selectedVariant.stock_estimate || 0) === 0 ? (
+                        <>
+                          <XCircle className="h-4 w-4" />
+                          غير متوفر
+                        </>
+                      ) : !hasVariants && (product.stock_estimate || 0) === 0 ? (
+                        <>
+                          <XCircle className="h-4 w-4" />
+                          غير متوفر
+                        </>
+                      ) : (
+                        <>
+                          <ShoppingCart className="h-4 w-4" />
+                          إضافة للسلة
+                        </>
+                      )}
+                    </button>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
     </div>
   );
 }
-
-
-
-
