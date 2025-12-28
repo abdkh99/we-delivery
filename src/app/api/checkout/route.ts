@@ -1,5 +1,5 @@
 // ==========================================
-// WORKING CHECKOUT API - TESTED & VERIFIED
+// ENHANCED CHECKOUT API - WITH VARIANT STOCK VALIDATION
 // Replace: src/app/api/checkout/route.ts
 // ==========================================
 
@@ -36,7 +36,7 @@ export async function POST(request: Request) {
 
   try {
     console.log("\n===========================================");
-    console.log("🚀 CHECKOUT API STARTED");
+    console.log("🚀 CHECKOUT API STARTED (WITH VARIANT SUPPORT)");
     console.log("===========================================\n");
 
     const supabase = await createClient();
@@ -92,9 +92,9 @@ export async function POST(request: Request) {
     console.log("✅ Basic validation passed");
 
     // ============================================
-    // 4. VERIFY PRODUCTS EXIST IN DATABASE
+    // 4. VERIFY PRODUCTS & VARIANTS IN DATABASE
     // ============================================
-    console.log("\n🔍 Verifying products...");
+    console.log("\n🔍 Verifying products and variants...");
 
     const productIds = items
       .map((item) => item?.product?.id)
@@ -108,9 +108,24 @@ export async function POST(request: Request) {
       );
     }
 
+    // Fetch products with their variants
     const { data: dbProducts, error: productsError } = await supabase
       .from("products")
-      .select("id, name, price, stock_estimate, is_active")
+      .select(`
+        id, 
+        name, 
+        price, 
+        stock_estimate, 
+        is_active,
+        has_variants,
+        product_variants (
+          id,
+          variant_name,
+          price,
+          stock_estimate,
+          is_active
+        )
+      `)
       .in("id", productIds);
 
     if (productsError) {
@@ -123,12 +138,6 @@ export async function POST(request: Request) {
 
     if (!dbProducts || dbProducts.length !== productIds.length) {
       console.error("❌ Some products not found");
-      console.log("Requested:", productIds);
-      console.log(
-        "Found:",
-        dbProducts?.map((p) => p.id)
-      );
-
       return NextResponse.json(
         {
           error: "بعض المنتجات غير متوفرة",
@@ -154,27 +163,102 @@ export async function POST(request: Request) {
     console.log("✅ All products verified and active");
 
     // ============================================
-    // 5. VALIDATE STOCK
+    // 5. VALIDATE STOCK (CRITICAL - VARIANT LEVEL)
     // ============================================
-    console.log("\n📊 Checking stock...");
+    console.log("\n📊 Checking stock at variant level...");
 
     for (const item of items) {
       const dbProduct = dbProducts.find((p) => p.id === item.product.id);
       if (!dbProduct) continue;
 
-      if (item.quantity > dbProduct.stock_estimate) {
-        console.error("❌ Insufficient stock for:", dbProduct.name);
-        return NextResponse.json(
-          {
-            error: "كمية غير متوفرة",
-            message: `${dbProduct.name} - المتوفر: ${dbProduct.stock_estimate}`,
-          },
-          { status: 400 }
+      // Check if this item uses a variant
+      if (item.variantId) {
+        console.log(`Checking variant ${item.variantId} for product ${dbProduct.name}`);
+        
+        // Find the variant
+        const variant = (dbProduct.product_variants || []).find(
+          (v: any) => v.id === item.variantId
         );
+
+        if (!variant) {
+          console.error("❌ Variant not found:", item.variantId);
+          return NextResponse.json(
+            {
+              error: "النكهة المختارة غير متوفرة",
+              message: `يرجى اختيار نكهة أخرى لـ ${dbProduct.name}`,
+            },
+            { status: 400 }
+          );
+        }
+
+        if (!variant.is_active) {
+          console.error("❌ Variant is inactive:", variant.variant_name);
+          return NextResponse.json(
+            {
+              error: "النكهة غير متوفرة حالياً",
+              message: `${variant.variant_name} غير متوفرة`,
+            },
+            { status: 400 }
+          );
+        }
+
+        // CRITICAL: Check variant stock
+        if (item.quantity > (variant.stock_estimate || 0)) {
+          console.error(
+            `❌ Insufficient stock for variant: ${variant.variant_name}`,
+            `Available: ${variant.stock_estimate}, Requested: ${item.quantity}`
+          );
+          return NextResponse.json(
+            {
+              error: "كمية غير متوفرة",
+              message: `${dbProduct.name} - ${variant.variant_name}: المتوفر ${variant.stock_estimate || 0}`,
+            },
+            { status: 400 }
+          );
+        }
+
+        // CRITICAL: Reject if stock is 0
+        if ((variant.stock_estimate || 0) === 0) {
+          console.error(`❌ Variant out of stock: ${variant.variant_name}`);
+          return NextResponse.json(
+            {
+              error: "المنتج غير متوفر",
+              message: `${dbProduct.name} - ${variant.variant_name} غير متوفر حالياً`,
+            },
+            { status: 400 }
+          );
+        }
+
+        console.log(`✅ Variant stock OK: ${variant.variant_name} (${variant.stock_estimate} available)`);
+      } else {
+        // Product without variant - check product stock
+        if (item.quantity > (dbProduct.stock_estimate || 0)) {
+          console.error("❌ Insufficient stock for:", dbProduct.name);
+          return NextResponse.json(
+            {
+              error: "كمية غير متوفرة",
+              message: `${dbProduct.name} - المتوفر: ${dbProduct.stock_estimate || 0}`,
+            },
+            { status: 400 }
+          );
+        }
+
+        if ((dbProduct.stock_estimate || 0) === 0) {
+          console.error(`❌ Product out of stock: ${dbProduct.name}`);
+          return NextResponse.json(
+            {
+              error: "المنتج غير متوفر",
+              message: `${dbProduct.name} غير متوفر حالياً`,
+            },
+            { status: 400 }
+          );
+        }
+
+        console.log(`✅ Product stock OK: ${dbProduct.name} (${dbProduct.stock_estimate} available)`);
       }
     }
 
-    console.log("✅ Stock available for all items");
+    console.log("✅ All stock checks passed");
 
     // ============================================
     // 6. CALCULATE TOTALS
@@ -244,7 +328,131 @@ export async function POST(request: Request) {
     console.log("Payment method:", paymentMethod);
 
     // ============================================
-    // 8. CREATE ORDER
+    // 8. RESERVE STOCK ATOMICALLY (CRITICAL)
+    // ============================================
+    console.log("\n🔒 Reserving stock atomically...");
+
+    const reservedItems: any[] = [];
+    
+    for (const item of items) {
+      try {
+        if (item.variantId) {
+          // Reserve variant stock
+          const { data: reserveResult, error: reserveError } = await supabase.rpc(
+            "reserve_variant_stock",
+            {
+              p_variant_id: item.variantId,
+              p_quantity: item.quantity,
+            }
+          );
+
+          if (reserveError || !reserveResult?.success) {
+            console.error("❌ Failed to reserve variant stock:", reserveError || reserveResult);
+            
+            // Rollback all reserved items
+            for (const reserved of reservedItems) {
+              if (reserved.variantId) {
+                await supabase.rpc("reserve_variant_stock", {
+                  p_variant_id: reserved.variantId,
+                  p_quantity: -reserved.quantity, // Return stock
+                });
+              } else {
+                await supabase.rpc("reserve_product_stock", {
+                  p_product_id: reserved.productId,
+                  p_quantity: -reserved.quantity, // Return stock
+                });
+              }
+            }
+
+            return NextResponse.json(
+              {
+                error: reserveResult?.error_ar || "فشل حجز المخزون",
+                message: "بعض المنتجات غير متوفرة بالكمية المطلوبة",
+              },
+              { status: 400 }
+            );
+          }
+
+          reservedItems.push({
+            variantId: item.variantId,
+            quantity: item.quantity,
+            productId: item.product.id,
+          });
+
+          console.log(`✅ Reserved ${item.quantity} units of variant ${item.variantId}`);
+        } else {
+          // Reserve product stock
+          const { data: reserveResult, error: reserveError } = await supabase.rpc(
+            "reserve_product_stock",
+            {
+              p_product_id: item.product.id,
+              p_quantity: item.quantity,
+            }
+          );
+
+          if (reserveError || !reserveResult?.success) {
+            console.error("❌ Failed to reserve product stock:", reserveError || reserveResult);
+            
+            // Rollback all reserved items
+            for (const reserved of reservedItems) {
+              if (reserved.variantId) {
+                await supabase.rpc("reserve_variant_stock", {
+                  p_variant_id: reserved.variantId,
+                  p_quantity: -reserved.quantity,
+                });
+              } else {
+                await supabase.rpc("reserve_product_stock", {
+                  p_product_id: reserved.productId,
+                  p_quantity: -reserved.quantity,
+                });
+              }
+            }
+
+            return NextResponse.json(
+              {
+                error: reserveResult?.error_ar || "فشل حجز المخزون",
+                message: "بعض المنتجات غير متوفرة بالكمية المطلوبة",
+              },
+              { status: 400 }
+            );
+          }
+
+          reservedItems.push({
+            productId: item.product.id,
+            quantity: item.quantity,
+          });
+
+          console.log(`✅ Reserved ${item.quantity} units of product ${item.product.id}`);
+        }
+      } catch (error) {
+        console.error("❌ Error reserving stock:", error);
+        
+        // Rollback
+        for (const reserved of reservedItems) {
+          if (reserved.variantId) {
+            await supabase.rpc("reserve_variant_stock", {
+              p_variant_id: reserved.variantId,
+              p_quantity: -reserved.quantity,
+            });
+          } else {
+            await supabase.rpc("reserve_product_stock", {
+              p_product_id: reserved.productId,
+              p_quantity: -reserved.quantity,
+            });
+          }
+        }
+
+        return NextResponse.json(
+          { error: "فشل حجز المخزون", message: "حدث خطأ أثناء معالجة الطلب" },
+          { status: 500 }
+        );
+      }
+    }
+
+    console.log("✅ All stock reserved successfully");
+
+    // ============================================
+    // 9. CREATE ORDER
     // ============================================
     console.log("\n📝 Creating order...");
 
@@ -271,6 +479,22 @@ export async function POST(request: Request) {
 
     if (orderError) {
       console.error("❌ Order creation failed:", orderError);
+      
+      // Rollback stock
+      for (const reserved of reservedItems) {
+        if (reserved.variantId) {
+          await supabase.rpc("reserve_variant_stock", {
+            p_variant_id: reserved.variantId,
+            p_quantity: -reserved.quantity,
+          });
+        } else {
+          await supabase.rpc("reserve_product_stock", {
+            p_product_id: reserved.productId,
+            p_quantity: -reserved.quantity,
+          });
+        }
+      }
+
       return NextResponse.json(
         {
           error: "فشل إنشاء الطلب",
@@ -283,7 +507,7 @@ export async function POST(request: Request) {
     console.log("✅ Order created:", order.id);
 
     // ============================================
-    // 9. CREATE ORDER ITEMS
+    // 10. CREATE ORDER ITEMS
     // ============================================
     console.log("\n📦 Creating order items...");
 
@@ -294,13 +518,11 @@ export async function POST(request: Request) {
         order_id: order.id,
         product_id: item.product.id,
         qty: item.quantity,
-        price_at_order: dbProduct?.price || item.product.price,
+        price_at_order: item.product.price,
         payment_method: item.paymentMethod || "cash",
         variant_id: item.variantId || null,
       };
     });
-
-    console.log("Order items to create:", JSON.stringify(orderItems, null, 2));
 
     const { data: createdItems, error: itemsError } = await supabase
       .from("order_items")
@@ -309,10 +531,23 @@ export async function POST(request: Request) {
 
     if (itemsError) {
       console.error("❌ Order items creation failed:", itemsError);
-      console.error("Attempted to insert:", orderItems);
 
-      // ROLLBACK: Delete the order
+      // ROLLBACK: Delete order and return stock
       await supabase.from("orders").delete().eq("id", order.id);
+      
+      for (const reserved of reservedItems) {
+        if (reserved.variantId) {
+          await supabase.rpc("reserve_variant_stock", {
+            p_variant_id: reserved.variantId,
+            p_quantity: -reserved.quantity,
+          });
+        } else {
+          await supabase.rpc("reserve_product_stock", {
+            p_product_id: reserved.productId,
+            p_quantity: -reserved.quantity,
+          });
+        }
+      }
 
       return NextResponse.json(
         {
@@ -327,7 +562,7 @@ export async function POST(request: Request) {
     console.log("✅ Order items created:", createdItems?.length || 0);
 
     // ============================================
-    // 10. DEDUCT POINTS (if applicable)
+    // 11. DEDUCT POINTS (if applicable)
     // ============================================
     if (pointsToDeduct > 0) {
       console.log("\n💎 Deducting points:", pointsToDeduct);
@@ -347,6 +582,20 @@ export async function POST(request: Request) {
         // ROLLBACK
         await supabase.from("order_items").delete().eq("order_id", order.id);
         await supabase.from("orders").delete().eq("id", order.id);
+        
+        for (const reserved of reservedItems) {
+          if (reserved.variantId) {
+            await supabase.rpc("reserve_variant_stock", {
+              p_variant_id: reserved.variantId,
+              p_quantity: -reserved.quantity,
+            });
+          } else {
+            await supabase.rpc("reserve_product_stock", {
+              p_product_id: reserved.productId,
+              p_quantity: -reserved.quantity,
+            });
+          }
+        }
 
         return NextResponse.json(
           {
@@ -360,50 +609,6 @@ export async function POST(request: Request) {
 
       console.log("✅ Points deducted successfully");
     }
-
-    // ============================================
-    // 11. UPDATE STOCK - خصم المخزون
-    // ============================================
-    console.log("\n📊 Updating stock...");
-
-    for (const item of items) {
-      const dbProduct = dbProducts.find((p) => p.id === item.product.id);
-      if (!dbProduct) continue;
-
-      // خصم من المخزون الرئيسي
-      const newStock = Math.max(0, dbProduct.stock_estimate - item.quantity);
-
-      const { error: stockError } = await supabase
-        .from("products")
-        .update({ stock_estimate: newStock })
-        .eq("id", item.product.id);
-
-      if (stockError) {
-        console.warn("⚠️ Stock update warning:", stockError.message);
-        // Don't fail the order for stock update issues
-      } else {
-        console.log(`✅ Deducted ${item.quantity} from product ${dbProduct.name}`);
-      }
-
-      // إذا كان هناك variant، اخصم من مخزونه أيضاً
-      if (item.variantId) {
-        const { data: variant } = await supabase
-          .from("product_variants")
-          .select("stock_estimate")
-          .eq("id", item.variantId)
-          .single();
-        
-        if (variant) {
-          const newVariantStock = Math.max(0, (variant.stock_estimate || 0) - item.quantity);
-          await supabase
-            .from("product_variants")
-            .update({ stock_estimate: newVariantStock })
-            .eq("id", item.variantId);
-        }
-      }
-    }
-
-    console.log("✅ Stock updated");
 
     // ============================================
     // 12. SUCCESS RESPONSE
