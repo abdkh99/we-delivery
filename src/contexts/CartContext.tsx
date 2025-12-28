@@ -14,13 +14,14 @@ type Product = Database["public"]["Tables"]["products"]["Row"];
 interface CartItem {
   product: Product;
   quantity: number;
-  paymentMethod: 'cash' | 'points'; // كل منتج له طريقة دفع خاصة
-  variantId?: string; // معرف النكهة إذا كان المنتج له نكهة
+  paymentMethod: 'cash' | 'points';
+  variantId?: string;
+  masterProductId?: string; // ✅ Add this to store original product ID
 }
 
 interface CartContextType {
   items: CartItem[];
-  addItem: (product: Product, quantity: number, variantId?: string) => void;
+  addItem: (product: Product, quantity: number, variantId?: string, masterProductId?: string) => void;
   removeItem: (productId: string, variantId?: string) => void;
   updateQuantity: (productId: string, quantity: number, variantId?: string) => void;
   updateItemPaymentMethod: (productId: string, method: 'cash' | 'points', variantId?: string) => void;
@@ -36,7 +37,6 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
 
-  // Load cart from localStorage on mount
   useEffect(() => {
     const savedCart = localStorage.getItem("cart");
     if (savedCart) {
@@ -49,14 +49,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  // Save cart to localStorage whenever items change
   useEffect(() => {
     localStorage.setItem("cart", JSON.stringify(items));
   }, [items]);
 
-  const addItem = (product: Product, quantity: number, variantId?: string) => {
+  const addItem = (product: Product, quantity: number, variantId?: string, masterProductId?: string) => {
     setItems((prevItems) => {
-      // للنكهات، نتحقق من variantId بدلاً من product.id
       const existingItem = prevItems.find(
         (item) => variantId 
           ? item.variantId === variantId
@@ -64,14 +62,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
       );
 
       if (existingItem) {
-        // Update quantity if item already exists
         return prevItems.map((item) => {
           const isMatch = variantId 
             ? item.variantId === variantId
             : item.product.id === product.id && !item.variantId;
           
           if (isMatch) {
-            // حد أقصى: لا تسمح بالكمية أكثر من المخزون أو 100 (أيهما أقل)
             const MAX_QUANTITY_PER_PRODUCT = 100;
             const maxQuantity = Math.min(
               item.quantity + quantity,
@@ -86,8 +82,13 @@ export function CartProvider({ children }: { children: ReactNode }) {
           return item;
         });
       } else {
-        // Add new item with default payment method (cash)
-        return [...prevItems, { product, quantity, paymentMethod: 'cash', variantId }];
+        return [...prevItems, { 
+          product, 
+          quantity, 
+          paymentMethod: 'cash', 
+          variantId,
+          masterProductId // ✅ Store the master product ID
+        }];
       }
     });
   };
@@ -116,7 +117,6 @@ export function CartProvider({ children }: { children: ReactNode }) {
           : item.product.id === productId && !item.variantId;
         
         if (isMatch) {
-          // حد أقصى: لا تسمح بالكمية أكثر من المخزون أو 100 (أيهما أقل)
           const MAX_QUANTITY_PER_PRODUCT = 100;
           const maxQuantity = Math.min(
             quantity, 
@@ -159,17 +159,15 @@ export function CartProvider({ children }: { children: ReactNode }) {
     );
   };
 
-  // حساب النقاط المطلوبة (للمنتجات المحددة بـ points)
   const getPointsNeeded = () => {
     return items
       .filter(item => item.paymentMethod === 'points')
       .reduce((total, item) => {
         const itemTotal = item.product.price * item.quantity;
-        return total + Math.ceil(itemTotal / 10); // 1 point = 10 SYP
+        return total + Math.ceil(itemTotal / 10);
       }, 0);
   };
 
-  // حساب المبلغ النقدي المطلوب (للمنتجات المحددة بـ cash)
   const getCashNeeded = () => {
     return items
       .filter(item => item.paymentMethod === 'cash')
