@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 
 export async function PUT(
   request: Request,
@@ -44,6 +45,13 @@ export async function PUT(
       description,
     } = body;
 
+    // Get old product data to detect changes
+    const { data: oldProduct } = await supabase
+      .from("products")
+      .select("stock_estimate, price")
+      .eq("id", id)
+      .single();
+
     // Update product
     const { data: product, error: productError } = await supabase
       .from("products")
@@ -66,6 +74,30 @@ export async function PUT(
         { error: "Failed to update product" },
         { status: 500 }
       );
+    }
+
+    // 🔥 CRITICAL: Revalidate cache if stock or price changed
+    const stockChanged = oldProduct && oldProduct.stock_estimate !== stock_estimate;
+    const priceChanged = oldProduct && oldProduct.price !== price;
+    
+    if (stockChanged || priceChanged) {
+      console.log(`🔄 Revalidating cache for product ${id} (stock: ${stockChanged}, price: ${priceChanged})`);
+      try {
+        // Revalidate product pages
+        revalidatePath("/", "layout");
+        revalidatePath("/products");
+        revalidatePath("/products/[id]", "page");
+        revalidatePath(`/products/${id}`);
+        
+        // Revalidate admin pages
+        revalidatePath("/admin");
+        revalidatePath("/admin/products");
+        
+        console.log("✅ Cache revalidated - updates will appear immediately");
+      } catch (revalidateError) {
+        console.error("⚠️ Cache revalidation warning (non-critical):", revalidateError);
+        // Non-critical - product update is already successful
+      }
     }
 
     return NextResponse.json({ product });
@@ -122,6 +154,21 @@ export async function DELETE(
         { error: "Failed to delete product" },
         { status: 500 }
       );
+    }
+
+    // 🔥 CRITICAL: Revalidate cache after product deletion
+    console.log(`🔄 Revalidating cache after deleting product ${id}`);
+    try {
+      revalidatePath("/", "layout");
+      revalidatePath("/products");
+      revalidatePath("/products/[id]", "page");
+      revalidatePath(`/products/${id}`);
+      revalidatePath("/admin");
+      revalidatePath("/admin/products");
+      
+      console.log("✅ Cache revalidated");
+    } catch (revalidateError) {
+      console.error("⚠️ Cache revalidation warning (non-critical):", revalidateError);
     }
 
     return NextResponse.json({ success: true });
