@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { mutate } from "swr";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import Navigation from "@/components/Navigation";
@@ -185,7 +186,7 @@ export default function CartPage() {
 
       if (data.success && data.order) {
         console.log("✅ Order created successfully:", data.order.id);
-
+        mutate("/api/products"); // ✅ Update stock cache
         clearCart();
 
         toast.success("تم تقديم الطلب بنجاح!", {

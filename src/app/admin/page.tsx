@@ -32,6 +32,7 @@ import {
   CheckCircle,
   XCircle,
   Phone,
+  UserPlus,
 } from "lucide-react";
 import { AdminDashboardSkeleton } from "@/components/AdminSkeleton";
 import { toast } from "sonner";
@@ -117,7 +118,7 @@ export default function AdminDashboard() {
   useEffect(() => {
     if (!authLoading && profile?.role === "admin") {
       fetchData();
-      fetchCurrentRate(); // جلب سعر الصرف عند تحميل الصفحة
+      fetchCurrentRate();
 
       // تحديث تلقائي كل 5 ثواني
       const interval = setInterval(() => {
@@ -137,7 +138,6 @@ export default function AdminDashboard() {
   const fetchData = async () => {
     try {
       console.log("🔄 Admin: Fetching data...");
-      // استخدام API موحد بدلاً من 3 طلبات منفصلة
       const response = await fetch("/api/admin/dashboard-data");
 
       if (!response.ok) {
@@ -173,10 +173,12 @@ export default function AdminDashboard() {
       });
 
       if (response.ok) {
-        await fetchData(); // Refresh data
+        await fetchData();
+        toast.success("تم تحديث حالة الطلب بنجاح");
       }
     } catch (error) {
       console.error("Error updating order status:", error);
+      toast.error("فشل تحديث حالة الطلب");
     }
   };
 
@@ -194,10 +196,12 @@ export default function AdminDashboard() {
       );
 
       if (response.ok) {
-        await fetchData(); // Refresh data
+        await fetchData();
+        toast.success("تم تعيين السائق بنجاح");
       }
     } catch (error) {
       console.error("Error assigning driver:", error);
+      toast.error("فشل تعيين السائق");
     }
   };
 
@@ -336,7 +340,6 @@ export default function AdminDashboard() {
   const stats = {
     totalOrders: orders.length,
     pendingOrders: orders.filter((o) => o.status === "pending").length,
-    // be defensive: total_price might be null/undefined
     totalRevenue: orders.reduce(
       (sum, order) => sum + (Number(order.total_price ?? 0) || 0),
       0
@@ -355,7 +358,7 @@ export default function AdminDashboard() {
     activeDrivers: drivers.filter((d) => d.active).length,
   };
 
-  // فلترة الطلبات حسب الحالة
+  // فلترة الطلبات حسب الحالة والمنطقة
   const regionizedOrders =
     statusFilter === "all"
       ? orders
@@ -376,7 +379,7 @@ export default function AdminDashboard() {
     )
   );
 
-  // فلترة السائقين حسب المنطقة باستخدام حقل region
+  // فلترة السائقين حسب المنطقة
   const getDriversForRegion = (region: string) => {
     const activeDrivers = drivers.filter((driver) => driver.active);
 
@@ -396,6 +399,7 @@ export default function AdminDashboard() {
       <Navigation />
 
       <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8 py-4 sm:py-6 lg:py-8 space-y-6">
+        {/* Enhanced Header with Gradient */}
         <div className="bg-gradient-to-br from-blue-600 to-blue-500 text-white rounded-3xl p-6 sm:p-8 shadow-lg">
           <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
             <div>
@@ -455,6 +459,7 @@ export default function AdminDashboard() {
           </div>
         </div>
 
+        {/* Stats Cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-3 sm:p-4 lg:p-6">
             <div className="flex items-center">
@@ -521,7 +526,7 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        {/* 🔥 الأزرار السريعة - تم إصلاح رابط التقرير السريع */}
+        {/* Quick Actions */}
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
           {[
             {
@@ -538,7 +543,7 @@ export default function AdminDashboard() {
             },
             {
               label: "تقرير سريع",
-              href: "/admin/quick-report", // 🆕 تم الإصلاح!
+              href: "/admin/quick-report",
               icon: Flame,
               color: "bg-amber-50 text-amber-700 border-amber-100",
             },
@@ -560,7 +565,516 @@ export default function AdminDashboard() {
           ))}
         </div>
 
-        {/* باقي المحتوى (تم حذفه لتوفير المساحة ولكنه موجود في الملف الأصلي) */}
+        {/* Main Content Tabs */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+          <div className="border-b border-gray-200">
+            <nav className="-mb-px flex overflow-x-auto">
+              {[
+                { id: "orders", name: "الطلبات", icon: ShoppingCart },
+                { id: "products", name: "المنتجات", icon: Package },
+                { id: "drivers", name: "السائقين", icon: Truck },
+                { id: "reports", name: "التقارير", icon: FileText },
+                { id: "settings", name: "الإعدادات", icon: DollarSign },
+              ].map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`flex-shrink-0 py-3 sm:py-4 px-3 sm:px-6 border-b-2 font-medium text-xs sm:text-sm ${
+                    activeTab === tab.id
+                      ? "border-blue-500 text-blue-600 bg-blue-50"
+                      : "border-transparent text-gray-600 hover:text-gray-800 hover:border-gray-300"
+                  }`}
+                >
+                  <tab.icon className="h-4 w-4 sm:h-5 sm:w-5 inline mr-1 sm:mr-2" />
+                  <span className="whitespace-nowrap">{tab.name}</span>
+                </button>
+              ))}
+            </nav>
+          </div>
+
+          <div className="p-4 sm:p-6">
+            {/* Orders Tab */}
+            {activeTab === "orders" && (
+              <div className="space-y-4">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                  <h2 className="text-base sm:text-lg font-semibold text-gray-900">
+                    الطلبات الأخيرة ({filteredOrders.length})
+                  </h2>
+
+                  {/* Filters */}
+                  <div className="flex gap-2 flex-wrap">
+                    <select
+                      value={statusFilter}
+                      onChange={(e) => setStatusFilter(e.target.value)}
+                      className="text-sm border border-gray-300 rounded-lg px-3 py-2 bg-white"
+                    >
+                      <option value="all">جميع الحالات</option>
+                      <option value="pending">قيد الانتظار</option>
+                      <option value="confirmed">مؤكد</option>
+                      <option value="on_delivery">جاري التوصيل</option>
+                      <option value="delivered">تم التوصيل</option>
+                      <option value="cancelled">ملغي</option>
+                    </select>
+
+                    {regions.length > 0 && (
+                      <select
+                        value={regionFilter}
+                        onChange={(e) => setRegionFilter(e.target.value)}
+                        className="text-sm border border-gray-300 rounded-lg px-3 py-2 bg-white"
+                      >
+                        <option value="all">جميع المناطق</option>
+                        {regions.map((region) => (
+                          <option key={region} value={region}>
+                            {region}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                  </div>
+                </div>
+
+                {/* Mobile Orders List */}
+                <div className="space-y-3 sm:hidden">
+                  {filteredOrders.map((order) => (
+                    <div
+                      key={order.id}
+                      className="bg-gray-50 rounded-lg p-4 border border-gray-200"
+                    >
+                      <div className="flex justify-between items-start mb-3">
+                        <div>
+                          <div className="text-sm font-medium text-gray-900">
+                            طلب #{String(order.id).slice(-8)}
+                          </div>
+                          <div className="text-xs text-gray-600">
+                            {formatDate(order.created_at ?? new Date())}
+                          </div>
+                        </div>
+                        <span
+                          className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                            order.status === "pending"
+                              ? "bg-yellow-100 text-yellow-800"
+                              : order.status === "confirmed"
+                              ? "bg-blue-100 text-blue-800"
+                              : order.status === "on_delivery"
+                              ? "bg-orange-100 text-orange-800"
+                              : order.status === "delivered"
+                              ? "bg-green-100 text-green-800"
+                              : "bg-red-100 text-red-800"
+                          }`}
+                        >
+                          {formatOrderStatus(order.status)}
+                        </span>
+                      </div>
+
+                      <div className="space-y-2 mb-3">
+                        <div className="flex justify-between text-sm">
+                          <span className="text-gray-600">العميل:</span>
+                          <span className="text-gray-900">
+                            {order.users?.name ?? "-"}
+                          </span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-gray-600">الهاتف:</span>
+                          <span className="text-gray-900">
+                            {order.users?.phone ?? "-"}
+                          </span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-gray-600">المجموع:</span>
+                          <span className="text-gray-900 font-medium">
+                            {formatCurrency(Number(order.total_price ?? 0))}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="flex flex-wrap gap-2">
+                        <Link
+                          href={`/admin/orders/${order.id}`}
+                          className="flex-1 bg-blue-600 text-white text-center py-2 px-3 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
+                        >
+                          عرض التفاصيل
+                        </Link>
+                        {order.status === "pending" && (
+                          <>
+                            <button
+                              onClick={() =>
+                                updateOrderStatus(order.id, "confirmed")
+                              }
+                              className="flex-1 bg-blue-600 text-white py-2 px-3 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
+                            >
+                              تأكيد
+                            </button>
+                            {drivers.length > 0 && (
+                              <select
+                                onChange={(e) => {
+                                  if (e.target.value) {
+                                    assignDriver(order.id, e.target.value);
+                                  }
+                                }}
+                                className="flex-1 text-sm border rounded-lg px-2 py-2 bg-white"
+                              >
+                                <option value="">اختر السائق</option>
+                                {getDriversForRegion(
+                                  extractRegion(order.address_text ?? "")
+                                ).map((driver) => (
+                                  <option key={driver.id} value={driver.id}>
+                                    {driver.users?.name ?? "سائق"}{" "}
+                                    {driver.vehicle_info
+                                      ? `- ${driver.vehicle_info}`
+                                      : ""}
+                                  </option>
+                                ))}
+                              </select>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Desktop Table */}
+                <div className="hidden sm:block overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-700 uppercase tracking-wider">
+                          الطلب
+                        </th>
+                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-700 uppercase tracking-wider">
+                          العميل
+                        </th>
+                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-700 uppercase tracking-wider">
+                          الحالة
+                        </th>
+                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-700 uppercase tracking-wider">
+                          المجموع
+                        </th>
+                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-700 uppercase tracking-wider">
+                          الإجراءات
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {filteredOrders.map((order) => (
+                        <tr key={order.id}>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div>
+                              <div className="text-sm font-medium text-gray-900">
+                                #{String(order.id).slice(-8)}
+                              </div>
+                              <div className="text-sm text-gray-600">
+                                {formatDate(order.created_at ?? new Date())}
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm text-gray-900">
+                              {order.users?.name ?? "-"}
+                            </div>
+                            <div className="text-sm text-gray-600">
+                              {order.users?.phone ?? "-"}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span
+                              className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                order.status === "pending"
+                                  ? "bg-yellow-100 text-yellow-800"
+                                  : order.status === "confirmed"
+                                  ? "bg-blue-100 text-blue-800"
+                                  : order.status === "on_delivery"
+                                  ? "bg-orange-100 text-orange-800"
+                                  : order.status === "delivered"
+                                  ? "bg-green-100 text-green-800"
+                                  : "bg-red-100 text-red-800"
+                              }`}
+                            >
+                              {formatOrderStatus(order.status)}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {formatCurrency(Number(order.total_price ?? 0))}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
+                            <Link
+                              href={`/admin/orders/${order.id}`}
+                              className="text-blue-600 hover:text-blue-900"
+                            >
+                              عرض التفاصيل
+                            </Link>
+                            {order.status === "pending" && (
+                              <>
+                                <button
+                                  onClick={() =>
+                                    updateOrderStatus(order.id, "confirmed")
+                                  }
+                                  className="text-blue-600 hover:text-blue-900"
+                                >
+                                  تأكيد
+                                </button>
+                                {drivers.length > 0 && (
+                                  <select
+                                    onChange={(e) => {
+                                      if (e.target.value) {
+                                        assignDriver(order.id, e.target.value);
+                                      }
+                                    }}
+                                    className="text-sm border rounded px-2 py-1"
+                                  >
+                                    <option value="">
+                                      اختر السائق للمنطقة
+                                    </option>
+                                    {getDriversForRegion(
+                                      extractRegion(order.address_text ?? "")
+                                    ).map((driver) => (
+                                      <option key={driver.id} value={driver.id}>
+                                        {driver.users?.name ?? "سائق"}{" "}
+                                        {driver.vehicle_info
+                                          ? `- ${driver.vehicle_info}`
+                                          : ""}
+                                      </option>
+                                    ))}
+                                  </select>
+                                )}
+                              </>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* Products Tab */}
+            {activeTab === "products" && (
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <h2 className="text-lg font-semibold text-gray-900">
+                    المنتجات ({products.length})
+                  </h2>
+                  <Link
+                    href="/admin/products/new"
+                    className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    إضافة منتج
+                  </Link>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          المنتج
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          SKU
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          السعر
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          المخزون
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          الإجراءات
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {products.map((product) => (
+                        <tr key={product.id}>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm font-medium text-gray-900">
+                              {product.name}
+                            </div>
+                            <div className="text-sm text-gray-500">
+                              {product.category}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {product.sku}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {formatCurrency(product.price)}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {product.stock_estimate}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
+                            <Link
+                              href={`/admin/products/${product.id}`}
+                              className="text-blue-600 hover:text-blue-900"
+                            >
+                              <Edit className="h-4 w-4 inline" />
+                            </Link>
+                            <button className="text-red-600 hover:text-red-900">
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* Drivers Tab */}
+            {activeTab === "drivers" && (
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <h2 className="text-lg font-semibold text-gray-900">
+                    السائقين ({drivers.length})
+                  </h2>
+                  <button className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center">
+                    <UserPlus className="h-4 w-4 mr-2" />
+                    إضافة سائق
+                  </button>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          السائق
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          المركبة
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          المنطقة
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          الحالة
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          الإجراءات
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {drivers.map((driver) => (
+                        <tr key={driver.id}>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm font-medium text-gray-900">
+                              {driver.users.name}
+                            </div>
+                            <div className="text-sm text-gray-500">
+                              {driver.users.phone}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {driver.vehicle_info}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700">
+                              {driver.region || "غير محدد"}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span
+                              className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                driver.active
+                                  ? "bg-green-100 text-green-800"
+                                  : "bg-red-100 text-red-800"
+                              }`}
+                            >
+                              {driver.active ? "نشط" : "غير نشط"}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
+                            <button className="text-blue-600 hover:text-blue-900">
+                              <Edit className="h-4 w-4" />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* Reports Tab */}
+            {activeTab === "reports" && (
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <h2 className="text-lg font-semibold text-gray-900">
+                    تقارير السائقين
+                  </h2>
+                  <button
+                    onClick={fetchDriverReports}
+                    disabled={reportsLoading}
+                    className="inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                  >
+                    <RefreshCcw
+                      className={`h-4 w-4 ${
+                        reportsLoading ? "animate-spin" : ""
+                      }`}
+                    />
+                    تحديث
+                  </button>
+                </div>
+
+                {reportsLoading ? (
+                  <div className="flex justify-center py-12">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+                  </div>
+                ) : driverReports.length > 0 ? (
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                            السائق
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                            عدد التوصيلات
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                            المكتملة
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                            الإجمالي
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {driverReports.map((report: any) => (
+                          <tr key={report.driver_id}>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                              {report.driver_name}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                              {report.total_deliveries}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                              {report.completed_deliveries}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                              {formatCurrency(report.total_amount || 0)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div className="text-center py-12 text-gray-500">
+                    لا توجد تقارير متاحة
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Settings Tab */}
+            {activeTab === "settings" && <CommissionSettings />}
+          </div>
+        </div>
       </div>
     </div>
   );
