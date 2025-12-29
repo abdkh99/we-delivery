@@ -2,6 +2,7 @@
 // API محسّن - تحديث سعر الصرف + تحديث تلقائي لأسعار جميع المنتجات
 
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 
 /**
@@ -194,10 +195,27 @@ export async function POST(request: Request) {
 
     const totalUpdated = updateResult?.[0]?.total_updated || 0;
 
+    // 7. 🔥 CRITICAL: Revalidate Next.js cache to show updated prices immediately
+    console.log("\n7️⃣ Revalidating Next.js cache...");
+    try {
+      // Revalidate all product-related pages
+      revalidatePath("/", "layout");           // Home page and all child routes
+      revalidatePath("/products");              // Products list
+      revalidatePath("/products/[id]", "page"); // Individual product pages
+      revalidatePath("/admin");                 // Admin dashboard
+      revalidatePath("/admin/currency");        // Currency management page
+      revalidatePath("/cart");                  // Cart page
+      console.log("✅ Cache revalidated successfully");
+    } catch (revalidateError) {
+      console.error("⚠️ Cache revalidation error (non-critical):", revalidateError);
+      // Non-critical error - we continue anyway
+    }
+
     console.log("\n========================================");
     console.log("✅ COMPLETE!");
     console.log(`💱 New exchange rate: ${roundedRate} SYP`);
     console.log(`📦 Total products updated: ${totalUpdated}`);
+    console.log("🔄 Cache revalidated - UI will update immediately");
     console.log("========================================\n");
 
     return NextResponse.json({
