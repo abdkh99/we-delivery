@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { calculateLoyaltyPoints } from "@/lib/utils";
 
 export async function GET(
@@ -199,10 +200,15 @@ export async function PATCH(
       newStatus: order.status
     });
 
+    // Track if stock was changed for revalidation
+    let stockWasChanged = false;
+    const affectedProductIds: string[] = [];
+
     // ✅ إدارة المخزون: إرجاع المخزون عند الإلغاء
     const oldStatus = currentOrder?.status;
     if (oldStatus && status === "cancelled" && (oldStatus === "pending" || oldStatus === "confirmed")) {
       console.log(`📦 Returning stock for cancelled order: ${oldStatus} → ${status}`);
+      stockWasChanged = true;
       
       // استخدام order_items من currentOrder (قبل التحديث) لضمان الحصول على البيانات الصحيحة
       const orderItems = currentOrder?.order_items || [];
@@ -211,6 +217,8 @@ export async function PATCH(
         for (const item of orderItems) {
           const product = item.products as any;
           if (!product) continue;
+          
+          affectedProductIds.push(product.id);
           
           // إرجاع المخزون الرئيسي
           const currentStock = await supabase
@@ -340,6 +348,32 @@ export async function PATCH(
         } else {
           console.error("❌ Cancellation failed:", result.message);
         }
+      }
+    }
+
+    // 🔥 CRITICAL: Revalidate cache if stock was changed
+    if (stockWasChanged && affectedProductIds.length > 0) {
+      console.log("\n🔄 Revalidating cache after stock changes...");
+      try {
+        // Revalidate product pages
+        revalidatePath("/", "layout");
+        revalidatePath("/products");
+        revalidatePath("/products/[id]", "page");
+        
+        // Revalidate specific affected products
+        const uniqueProductIds = [...new Set(affectedProductIds)];
+        for (const productId of uniqueProductIds) {
+          revalidatePath(`/products/${productId}`);
+        }
+        
+        // Revalidate admin pages
+        revalidatePath("/admin");
+        revalidatePath("/admin/orders");
+        
+        console.log("✅ Cache revalidated - stock updates will appear immediately");
+      } catch (revalidateError) {
+        console.error("⚠️ Cache revalidation warning (non-critical):", revalidateError);
+        // Non-critical - order update is already successful
       }
     }
 
