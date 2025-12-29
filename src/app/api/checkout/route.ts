@@ -5,6 +5,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 
 // Utility functions (inline to avoid import issues)
 function calculateDeliveryFee(distance: number, totalPrice: number): number {
@@ -611,7 +612,29 @@ export async function POST(request: Request) {
     }
 
     // ============================================
-    // 12. SUCCESS RESPONSE
+    // 12. 🔥 REVALIDATE CACHE - CRITICAL FOR STOCK UPDATES
+    // ============================================
+    console.log("\n🔄 Revalidating cache for stock updates...");
+    try {
+      // Revalidate affected product pages
+      revalidatePath("/", "layout");
+      revalidatePath("/products");
+      revalidatePath("/products/[id]", "page");
+      
+      // Revalidate specific product pages for ordered items
+      const affectedProductIds = [...new Set(items.map(item => item.product.id))];
+      for (const productId of affectedProductIds) {
+        revalidatePath(`/products/${productId}`);
+      }
+      
+      console.log("✅ Cache revalidated - stock updates will appear immediately");
+    } catch (revalidateError) {
+      console.error("⚠️ Cache revalidation warning (non-critical):", revalidateError);
+      // Non-critical - order is already successful
+    }
+
+    // ============================================
+    // 13. SUCCESS RESPONSE
     // ============================================
     const duration = Date.now() - startTime;
     const potentialPoints =
