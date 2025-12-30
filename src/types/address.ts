@@ -1,49 +1,53 @@
 /**
- * Address System Types
- * Strict GPS-based address validation for delivery
+ * GPS-Based Address System Types
+ * 
+ * STRICT RULES:
+ * - All addresses MUST have GPS coordinates
+ * - No manual address creation without GPS
+ * - City is always "Damascus"
  */
 
 export type AddressLabel = 'home' | 'work' | 'gym' | 'school' | 'other';
 
-export interface UserAddress {
-  id: string;
-  user_id: string;
-  
-  // Address Label
-  label: AddressLabel;
-  
-  // GPS Coordinates (REQUIRED)
+export interface GPSCoordinates {
   latitude: number;
   longitude: number;
-  
-  // Auto-filled from reverse geocoding
-  street: string;
-  neighborhood?: string;
-  city: string; // Default: Damascus
-  
-  // User-provided details
-  address_details: string; // Building, floor, landmark
-  alternative_phone?: string;
-  
-  // Metadata
-  is_default: boolean;
-  is_active: boolean;
-  
-  created_at: string;
-  updated_at: string;
+  accuracy?: number; // GPS accuracy in meters
 }
 
-export interface GeocodingResult {
+export interface ReverseGeocodingResult {
   street: string;
   neighborhood?: string;
   city: string;
-  formatted_address: string;
+  formattedAddress: string;
 }
 
-export interface GPSLocation {
+export interface DeliveryAddress {
+  id: string;
+  userId: string;
+  label: AddressLabel;
+  
+  // GPS Data (REQUIRED)
   latitude: number;
   longitude: number;
-  accuracy?: number;
+  
+  // Auto-filled from GPS
+  city: string; // Always "Damascus"
+  street: string;
+  neighborhood?: string;
+  
+  // User-provided details (REQUIRED)
+  addressDetails: string; // e.g., "Building 2, Floor 1, near the pharmacy"
+  
+  // Optional contact
+  contactPhone?: string;
+  
+  // Default address flag
+  isDefault: boolean;
+  
+  // Timestamps
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface CreateAddressInput {
@@ -52,12 +56,28 @@ export interface CreateAddressInput {
   longitude: number;
   street: string;
   neighborhood?: string;
-  city: string;
-  address_details: string;
-  alternative_phone?: string;
-  is_default?: boolean;
+  addressDetails: string;
+  contactPhone?: string;
+  isDefault?: boolean;
 }
 
-export interface UpdateAddressInput extends Partial<CreateAddressInput> {
-  id: string;
+export interface UpdateAddressInput {
+  label?: AddressLabel;
+  street?: string;
+  neighborhood?: string;
+  addressDetails?: string;
+  contactPhone?: string;
+  isDefault?: boolean;
+}
+
+export interface GPSPermissionState {
+  granted: boolean;
+  denied: boolean;
+  prompt: boolean;
+}
+
+export interface LocationError {
+  code: number;
+  message: string;
+  type: 'PERMISSION_DENIED' | 'POSITION_UNAVAILABLE' | 'TIMEOUT' | 'UNKNOWN';
 }
