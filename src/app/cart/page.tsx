@@ -24,16 +24,18 @@ import {
   AlertCircle,
   Coins,
   DollarSign,
+  MapPin,
 } from "lucide-react";
 import { toast } from "sonner";
 import LoadingSpinner from "@/components/LoadingSpinner";
+import { CartSkeleton } from "@/components/CartSkeleton";
 
-const MapLocationPicker = dynamic(
-  () => import("@/components/MapLocationPicker"),
+const AddressStepDynamic = dynamic(
+  () => import("@/components/AddressStep"),
   {
     ssr: false,
     loading: () => (
-      <div className="animate-pulse bg-gray-200 h-10 rounded-lg"></div>
+      <div className="animate-pulse bg-gray-200 h-64 rounded-lg"></div>
     ),
   }
 );
@@ -52,9 +54,17 @@ export default function CartPage() {
   } = useCart();
 
   const router = useRouter();
-  const [deliveryAddress, setDeliveryAddress] = useState("");
-  const [deliveryLat, setDeliveryLat] = useState<number | null>(null);
-  const [deliveryLng, setDeliveryLng] = useState<number | null>(null);
+  const [selectedAddress, setSelectedAddress] = useState<{
+    id?: string;
+    lat: number;
+    lng: number;
+    street: string;
+    neighborhood: string;
+    city: string;
+    address_details: string;
+    contact_phone?: string;
+    label: string;
+  } | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [userPoints, setUserPoints] = useState(0);
   const [loadingPoints, setLoadingPoints] = useState(true);
@@ -106,15 +116,15 @@ export default function CartPage() {
       return;
     }
 
-    if (!deliveryAddress.trim()) {
+    if (!selectedAddress) {
       toast.error("عنوان التوصيل مطلوب", {
-        description: "يرجى إدخال عنوان التوصيل أو تحديد موقع على الخريطة",
+        description: "يرجى اختيار عنوان التوصيل أو إضافة عنوان جديد",
         icon: <AlertCircle className="h-5 w-5" />,
       });
       return;
     }
 
-    if (!deliveryLat || !deliveryLng) {
+    if (!selectedAddress.lat || !selectedAddress.lng) {
       toast.error("الموقع غير محدد", {
         description: "يرجى تحديد موقعك على الخريطة",
         icon: <AlertCircle className="h-5 w-5" />,
@@ -132,6 +142,16 @@ export default function CartPage() {
 
     console.log("🚀 Starting Checkout...");
 
+    // Build full address string
+    const fullAddress = [
+      selectedAddress.street,
+      selectedAddress.neighborhood,
+      selectedAddress.city,
+      selectedAddress.address_details,
+    ]
+      .filter(Boolean)
+      .join(", ");
+
     const checkoutData = {
       items: items.map((item) => ({
         product: {
@@ -143,10 +163,10 @@ export default function CartPage() {
         paymentMethod: item.paymentMethod,
         variantId: item.variantId || null,
       })),
-      deliveryAddress: deliveryAddress.trim(),
-      deliveryLat: Number(deliveryLat),
-      deliveryLng: Number(deliveryLng),
-      notes: "",
+      deliveryAddress: fullAddress,
+      deliveryLat: Number(selectedAddress.lat),
+      deliveryLng: Number(selectedAddress.lng),
+      notes: selectedAddress.address_details || "",
     };
 
     console.log("📦 Checkout Data:", JSON.stringify(checkoutData, null, 2));
@@ -219,6 +239,11 @@ export default function CartPage() {
     }
   };
 
+  // Show skeleton while loading points
+  if (loadingPoints && user) {
+    return <CartSkeleton />;
+  }
+
   if (items.length === 0) {
     return (
       <div className="min-h-screen bg-gray-50">
@@ -259,11 +284,13 @@ export default function CartPage() {
         </div>
 
         <div className="grid lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
-          <div className="lg:col-span-2">
+          {/* Products Section */}
+          <div className="lg:col-span-2 space-y-4 sm:space-y-6">
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-              <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200">
-                <h2 className="text-base sm:text-lg font-semibold text-gray-900">
-                  المنتجات في السلة ({items.length})
+              <div className="px-4 sm:px-6 py-4 sm:py-5 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50">
+                <h2 className="text-lg sm:text-xl font-bold text-gray-900 flex items-center gap-2">
+                  <ShoppingBag className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
+                  <span>المنتجات في السلة ({items.length})</span>
                 </h2>
               </div>
 
@@ -449,15 +476,18 @@ export default function CartPage() {
             </div>
           </div>
 
-          <div className="lg:col-span-1">
+          {/* Summary Section */}
+          <div className="lg:col-span-1 space-y-4 sm:space-y-6">
+            {/* Order Summary Card */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 sticky top-4 sm:top-8">
-              <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200">
-                <h2 className="text-base sm:text-lg font-semibold text-gray-900">
-                  ملخص الطلب
+              <div className="px-4 sm:px-6 py-4 sm:py-5 border-b border-gray-200 bg-gradient-to-r from-green-50 to-emerald-50">
+                <h2 className="text-lg sm:text-xl font-bold text-gray-900 flex items-center gap-2">
+                  <CheckCircle className="h-5 w-5 sm:h-6 sm:w-6 text-green-600" />
+                  <span>ملخص الطلب</span>
                 </h2>
               </div>
 
-              <div className="p-4 sm:p-6 space-y-4">
+              <div className="p-4 sm:p-6 space-y-5">
                 {user && (
                   <div className="p-3 bg-blue-50 rounded-lg flex items-center justify-between">
                     <div className="flex items-center gap-2">
@@ -472,20 +502,45 @@ export default function CartPage() {
                   </div>
                 )}
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    عنوان التوصيل
+                {/* Address Selection Section */}
+                <div className="space-y-3">
+                  <label className="block text-sm sm:text-base font-bold text-gray-900 mb-3 text-right">
+                    <span className="flex items-center gap-2">
+                      <MapPin className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
+                      <span>عنوان التوصيل</span>
+                      <span className="text-red-500">*</span>
+                    </span>
                   </label>
-                  <MapLocationPicker
-                    value={deliveryAddress}
-                    onChange={(address, lat, lng) => {
-                      setDeliveryAddress(address);
-                      setDeliveryLat(lat);
-                      setDeliveryLng(lng);
-                    }}
-                    placeholder="أدخل عنوان التوصيل..."
-                    className="w-full"
-                  />
+                  <div className="bg-gray-50 rounded-xl p-4 border-2 border-dashed border-gray-200">
+                    <AddressStepDynamic
+                      onAddressSelected={setSelectedAddress}
+                      selectedAddressId={selectedAddress?.id}
+                      className="w-full"
+                    />
+                  </div>
+                  {selectedAddress && (
+                    <div className="mt-3 p-4 bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-300 rounded-xl shadow-sm">
+                      <p className="text-sm sm:text-base text-green-800 flex items-center gap-2 text-right mb-2 font-bold">
+                        <CheckCircle className="h-5 w-5 flex-shrink-0" />
+                        <span>✓ العنوان المحدد</span>
+                      </p>
+                      <div className="text-right space-y-1">
+                        <p className="text-sm font-semibold text-green-900">
+                          {selectedAddress.street}
+                        </p>
+                        {selectedAddress.neighborhood && (
+                          <p className="text-xs text-green-700">
+                            {selectedAddress.neighborhood}
+                          </p>
+                        )}
+                        {selectedAddress.address_details && (
+                          <p className="text-xs text-green-600 mt-2 pt-2 border-t border-green-200">
+                            {selectedAddress.address_details}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <div className="space-y-3 pt-4 border-t border-gray-200">
@@ -559,9 +614,9 @@ export default function CartPage() {
                   onClick={handleCheckout}
                   disabled={
                     !user ||
-                    !deliveryAddress ||
-                    !deliveryLat ||
-                    !deliveryLng ||
+                    !selectedAddress ||
+                    !selectedAddress.lat ||
+                    !selectedAddress.lng ||
                     isProcessing ||
                     pointsNeeded > userPoints
                   }
@@ -574,8 +629,8 @@ export default function CartPage() {
                     </>
                   ) : !user ? (
                     "سجل الدخول للمتابعة"
-                  ) : !deliveryAddress || !deliveryLat || !deliveryLng ? (
-                    "اختر موقع التوصيل"
+                  ) : !selectedAddress ? (
+                    "اختر عنوان التوصيل"
                   ) : pointsNeeded > userPoints ? (
                     "نقاط غير كافية"
                   ) : (

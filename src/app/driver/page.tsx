@@ -416,81 +416,123 @@ export default function DriverDashboard() {
               </div>
             ) : (
               deliveries.map((delivery) => (
-                <div key={delivery.id} className="p-4 sm:p-6">
-                  {/* Mobile Delivery Header */}
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
-                      <span className="text-base sm:text-lg font-semibold text-gray-900">
-                        طلب #{delivery.orders.id.slice(-8)}
-                      </span>
-                      <span
-                        className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium w-fit ${getStatusColor(
-                          delivery.status
-                        )}`}
-                      >
-                        {getStatusIcon(delivery.status)}
-                        <span className="ml-1">
-                          {delivery.status.replace("_", " ").toUpperCase()}
+                <div 
+                  key={delivery.id} 
+                  className="bg-white rounded-xl shadow-md border-2 border-gray-100 overflow-hidden hover:shadow-lg transition-all mb-4 sm:mb-6"
+                >
+                  {/* Enhanced Header with Status Badge */}
+                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-4 sm:px-6 py-4 border-b-2 border-gray-200">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                        <div className="flex items-center gap-3">
+                          <div className="w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center">
+                            <Package className="h-6 w-6 text-white" />
+                          </div>
+                          <div>
+                            <h3 className="text-lg sm:text-xl font-bold text-gray-900">
+                              طلب #{delivery.orders.id.slice(-8).toUpperCase()}
+                            </h3>
+                            <p className="text-xs sm:text-sm text-gray-600 mt-0.5">
+                              {formatDate(delivery.created_at)}
+                            </p>
+                          </div>
+                        </div>
+                        <span
+                          className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs sm:text-sm font-bold shadow-sm ${getStatusColor(
+                            delivery.status
+                          )}`}
+                        >
+                          {getStatusIcon(delivery.status)}
+                          <span className="mr-1.5">
+                            {delivery.status === "assigned" && "مخصص"}
+                            {delivery.status === "on_way" && "في الطريق"}
+                            {delivery.status === "delivered" && "تم التوصيل"}
+                            {delivery.status === "failed" && "فشل التوصيل"}
+                            {delivery.status === "cancelled" && "ملغي"}
+                          </span>
                         </span>
-                      </span>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-lg font-bold text-blue-600">
-                        {formatCurrency(delivery.orders.total_price)}
-                      </p>
-                      <p className="text-xs text-gray-600">
-                        {formatDate(delivery.created_at)}
-                      </p>
+                      </div>
+                      <div className="text-right sm:text-left">
+                        <p className="text-2xl sm:text-3xl font-bold text-blue-600">
+                          {formatCurrency(delivery.orders.total_price)}
+                        </p>
+                        <p className="text-xs text-gray-500 mt-1">إجمالي الطلب</p>
+                      </div>
                     </div>
                   </div>
 
-                  {/* Customer Info */}
-                  <div className="mb-4 p-3 bg-gray-50 rounded-lg">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-medium text-gray-900">
-                          العميل: {delivery.orders?.users?.name || "غير محدد"}
-                        </p>
+                  <div className="p-4 sm:p-6">
+
+                    {/* Customer Info - Enhanced */}
+                    <div className="mb-4 p-4 bg-gradient-to-r from-gray-50 to-blue-50 rounded-xl border border-gray-200">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-3 flex-1">
+                          <div className="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
+                            <span className="text-white font-bold text-lg">
+                              {delivery.orders?.users?.name?.charAt(0) || "?"}
+                            </span>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-base sm:text-lg font-bold text-gray-900 mb-1">
+                              {delivery.orders?.users?.name || "غير محدد"}
+                            </p>
+                            {delivery.orders?.users?.phone && (
+                              <div className="flex items-center gap-2">
+                                <Phone className="h-4 w-4 text-gray-500" />
+                                <a
+                                  href={`tel:${delivery.orders.users.phone}`}
+                                  className="text-sm sm:text-base text-blue-600 hover:text-blue-700 font-medium"
+                                >
+                                  {delivery.orders.users.phone}
+                                </a>
+                              </div>
+                            )}
+                          </div>
+                        </div>
                         {delivery.orders?.users?.phone && (
-                          <p className="text-sm text-gray-600">
-                            {delivery.orders.users.phone}
-                          </p>
+                          <a
+                            href={`tel:${delivery.orders.users.phone}`}
+                            className="inline-flex items-center gap-2 px-4 py-2.5 bg-green-600 text-white rounded-lg text-sm font-semibold hover:bg-green-700 transition-all shadow-md hover:shadow-lg flex-shrink-0"
+                          >
+                            <Phone className="h-4 w-4" />
+                            <span className="hidden sm:inline">اتصال</span>
+                          </a>
                         )}
                       </div>
-                      {delivery.orders?.users?.phone && (
-                        <a
-                          href={`tel:${delivery.orders.users.phone}`}
-                          className="inline-flex items-center px-3 py-1 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 transition-colors"
-                        >
-                          <Phone className="h-4 w-4 mr-1" />
-                          اتصال
-                        </a>
-                      )}
                     </div>
-                  </div>
 
-                  {/* Delivery Address */}
-                  <div className="mb-4">
-                    <h4 className="text-sm font-medium text-gray-900 mb-2 flex items-center">
-                      <MapPin className="h-4 w-4 mr-2" />
-                      عنوان التوصيل:
-                    </h4>
-                    <div className="bg-blue-50 rounded-lg p-3 flex items-start justify-between gap-3">
-                      <p className="text-sm text-gray-700 leading-relaxed flex-1">
-                        {delivery.orders.address_text}
-                      </p>
-                      <a
-                        href={`https://www.google.com/maps/dir/?api=1&destination=${delivery.orders.lat},${delivery.orders.lng}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center px-3 py-1.5 bg-green-600 text-white rounded-lg text-xs font-medium hover:bg-green-700 transition-colors whitespace-nowrap"
-                        title="فتح في Google Maps"
-                      >
-                        <NavigationIcon className="h-3.5 w-3.5 mr-1.5" />
-                        خرائط جوجل
-                      </a>
+                    {/* Delivery Address - Enhanced */}
+                    <div className="mb-4 p-4 bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 rounded-xl border-2 border-blue-200">
+                      <div className="flex items-center gap-2 mb-3">
+                        <MapPin className="h-5 w-5 text-blue-600" />
+                        <h4 className="text-base sm:text-lg font-bold text-gray-900">
+                          عنوان التوصيل
+                        </h4>
+                      </div>
+                      <div className="bg-white rounded-lg p-4 mb-3 border border-gray-200">
+                        <p className="text-sm sm:text-base text-gray-800 leading-relaxed font-medium">
+                          {delivery.orders.address_text}
+                        </p>
+                      </div>
+                      <div className="flex flex-col sm:flex-row gap-2">
+                        <a
+                          href={`https://www.google.com/maps/dir/?api=1&destination=${delivery.orders.lat},${delivery.orders.lng}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-green-600 text-white rounded-lg text-sm font-semibold hover:bg-green-700 transition-all shadow-md hover:shadow-lg"
+                        >
+                          <NavigationIcon className="h-4 w-4" />
+                          <span>فتح في خرائط Google</span>
+                        </a>
+                        <button
+                          onClick={() => openMap(delivery)}
+                          className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 border-2 border-blue-600 text-blue-600 rounded-lg text-sm font-semibold hover:bg-blue-50 transition-all"
+                        >
+                          <Map className="h-4 w-4" />
+                          <span>عرض الخريطة</span>
+                        </button>
+                      </div>
                     </div>
-                  </div>
 
                   {/* Order Items - Enhanced */}
                   {delivery.orders.order_items &&
@@ -567,50 +609,44 @@ export default function DriverDashboard() {
                       </div>
                     )}
 
-                  {/* Action Buttons - Mobile Optimized */}
-                  <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
-                    {/* Navigate Button */}
-                    <a
-                      href={`https://www.google.com/maps/dir/?api=1&destination=${delivery.orders.lat},${delivery.orders.lng}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex-1 inline-flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
-                    >
-                      <NavigationIcon className="h-4 w-4 mr-2" />
-                      التنقل
-                    </a>
-
-                    {/* View Map Button */}
-                    <button
-                      onClick={() => openMap(delivery)}
-                      className="flex-1 inline-flex items-center justify-center px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors"
-                    >
-                      <Map className="h-4 w-4 mr-2" />
-                      عرض الخريطة
-                    </button>
-
-                    {/* Status Action Buttons */}
-                    {delivery.status === "assigned" && (
-                      <button
-                        onClick={() =>
-                          updateDeliveryStatus(delivery.id, "on_way")
-                        }
-                        className="flex-1 inline-flex items-center justify-center px-4 py-2 bg-orange-600 text-white rounded-lg text-sm font-medium hover:bg-orange-700 transition-colors"
-                      >
-                        <Truck className="h-4 w-4 mr-2" />
-                        بدء التوصيل
-                      </button>
-                    )}
-                    {delivery.status === "on_way" && (
-                      <button
-                        onClick={() => openModal(delivery)}
-                        className="flex-1 inline-flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
-                      >
-                        <CheckCircle className="h-4 w-4 mr-2" />
-                        إكمال التوصيل
-                      </button>
-                    )}
+                    {/* Action Buttons - Enhanced & Mobile Optimized */}
+                    <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 pt-4 border-t border-gray-200">
+                      {/* Status Action Buttons */}
+                      {delivery.status === "assigned" && (
+                        <button
+                          onClick={() =>
+                            updateDeliveryStatus(delivery.id, "on_way")
+                          }
+                          className="w-full sm:flex-1 inline-flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-orange-600 to-orange-700 text-white rounded-xl text-base font-bold hover:from-orange-700 hover:to-orange-800 transition-all shadow-lg hover:shadow-xl"
+                        >
+                          <Truck className="h-5 w-5" />
+                          <span>بدء التوصيل</span>
+                        </button>
+                      )}
+                      {delivery.status === "on_way" && (
+                        <button
+                          onClick={() => openModal(delivery)}
+                          className="w-full sm:flex-1 inline-flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-xl text-base font-bold hover:from-green-700 hover:to-green-800 transition-all shadow-lg hover:shadow-xl"
+                        >
+                          <CheckCircle className="h-5 w-5" />
+                          <span>إتمام التوصيل</span>
+                        </button>
+                      )}
+                      {(delivery.status === "assigned" || delivery.status === "on_way") && (
+                        <a
+                          href={`https://www.google.com/maps/dir/?api=1&destination=${delivery.orders.lat},${delivery.orders.lng}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="w-full sm:flex-1 inline-flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl text-base font-bold hover:from-blue-700 hover:to-blue-800 transition-all shadow-lg hover:shadow-xl"
+                        >
+                          <NavigationIcon className="h-5 w-5" />
+                          <span>التنقل</span>
+                        </a>
+                      )}
+                    </div>
                   </div>
+                </div>
+              ))
                 </div>
               ))
             )}
