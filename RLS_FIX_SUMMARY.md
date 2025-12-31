@@ -91,3 +91,4 @@ CREATE POLICY "Admins can update any user" ON public.users
 3. يمكن جلب المنتجات في الواجهة الأمامية
 
 
+
