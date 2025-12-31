@@ -90,3 +90,4 @@ CREATE POLICY "Admins can update any user" ON public.users
 2. لا تظهر أخطاء 500 في سجلات API
 3. يمكن جلب المنتجات في الواجهة الأمامية
 
+
