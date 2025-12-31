@@ -101,7 +101,8 @@ export default function DriverDashboard() {
         let errorMessage = "Unable to get location";
         switch (error.code) {
           case error.PERMISSION_DENIED:
-            errorMessage = "تم رفض الوصول للموقع - يمكنك السماح بالوصول من إعدادات المتصفح";
+            errorMessage =
+              "تم رفض الوصول للموقع - يمكنك السماح بالوصول من إعدادات المتصفح";
             console.warn("ℹ️ Location access denied by user");
             break;
           case error.POSITION_UNAVAILABLE:
@@ -127,7 +128,6 @@ export default function DriverDashboard() {
     );
   };
 
-
   const updateDeliveryStatus = async (deliveryId: string, status: string) => {
     try {
       console.log("Updating delivery:", deliveryId, "to status:", status);
@@ -146,7 +146,9 @@ export default function DriverDashboard() {
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({}));
           console.error("Update failed:", errorData);
-          throw new Error(errorData.error || "Failed to update delivery status");
+          throw new Error(
+            errorData.error || "Failed to update delivery status"
+          );
         }
 
         console.log("Delivery updated successfully");
@@ -225,7 +227,6 @@ export default function DriverDashboard() {
     setSelectedDelivery(delivery);
     setShowMap(true);
   };
-
 
   // عرض loading أثناء تحميل البيانات
   if (authLoading) {
@@ -416,8 +417,8 @@ export default function DriverDashboard() {
               </div>
             ) : (
               deliveries.map((delivery) => (
-                <div 
-                  key={delivery.id} 
+                <div
+                  key={delivery.id}
                   className="bg-white rounded-xl shadow-md border-2 border-gray-100 overflow-hidden hover:shadow-lg transition-all mb-4 sm:mb-6"
                 >
                   {/* Enhanced Header with Status Badge */}
@@ -456,13 +457,14 @@ export default function DriverDashboard() {
                         <p className="text-2xl sm:text-3xl font-bold text-blue-600">
                           {formatCurrency(delivery.orders.total_price)}
                         </p>
-                        <p className="text-xs text-gray-500 mt-1">إجمالي الطلب</p>
+                        <p className="text-xs text-gray-500 mt-1">
+                          إجمالي الطلب
+                        </p>
                       </div>
                     </div>
                   </div>
 
                   <div className="p-4 sm:p-6">
-
                     {/* Customer Info - Enhanced */}
                     <div className="mb-4 p-4 bg-gradient-to-r from-gray-50 to-blue-50 rounded-xl border border-gray-200">
                       <div className="flex items-center justify-between gap-3">
@@ -534,80 +536,95 @@ export default function DriverDashboard() {
                       </div>
                     </div>
 
-                  {/* Order Items - Enhanced */}
-                  {delivery.orders.order_items &&
-                    delivery.orders.order_items.length > 0 && (
-                      <div className="mb-4">
-                        <h4 className="text-sm font-medium text-gray-900 mb-3 flex items-center">
-                          <Package className="h-4 w-4 mr-2" />
-                          المنتجات ({delivery.orders.order_items.length}):
-                        </h4>
-                        <div className="bg-gray-50 rounded-lg p-3 space-y-3">
-                          {delivery.orders.order_items.map((item: any) => {
-                            const flavor = item.product_flavors;
-                            const variant = item.product_variants;
-                            
-                            return (
-                              <div
-                                key={item.id}
-                                className="bg-white rounded-lg p-3 border border-gray-200"
-                              >
-                                <div className="flex justify-between items-start mb-2">
-                                  <div className="flex-1 min-w-0">
-                                    <p className="text-sm font-semibold text-gray-900 mb-1">
-                                      {item.products?.name || "منتج"}
-                                    </p>
-                                    {flavor && (
-                                      <p className="text-xs text-blue-600 font-medium mb-1">
-                                        🍕 النكهة: {flavor.name_ar || flavor.name}
+                    {/* Order Items - Enhanced */}
+                    {delivery.orders.order_items &&
+                      delivery.orders.order_items.length > 0 && (
+                        <div className="mb-4">
+                          <h4 className="text-sm font-medium text-gray-900 mb-3 flex items-center">
+                            <Package className="h-4 w-4 mr-2" />
+                            المنتجات ({delivery.orders.order_items.length}):
+                          </h4>
+                          <div className="bg-gray-50 rounded-lg p-3 space-y-3">
+                            {delivery.orders.order_items.map((item: any) => {
+                              const flavor = item.product_flavors;
+                              const variant = item.product_variants;
+
+                              return (
+                                <div
+                                  key={item.id}
+                                  className="bg-white rounded-lg p-3 border border-gray-200"
+                                >
+                                  <div className="flex justify-between items-start mb-2">
+                                    <div className="flex-1 min-w-0">
+                                      <p className="text-sm font-semibold text-gray-900 mb-1">
+                                        {item.products?.name || "منتج"}
                                       </p>
-                                    )}
-                                    {variant && (
-                                      <p className="text-xs text-purple-600 font-medium mb-1">
-                                        🎨 الصنف: {variant.variant_name}
+                                      {flavor && (
+                                        <p className="text-xs text-blue-600 font-medium mb-1">
+                                          🍕 النكهة:{" "}
+                                          {flavor.name_ar || flavor.name}
+                                        </p>
+                                      )}
+                                      {variant && (
+                                        <p className="text-xs text-purple-600 font-medium mb-1">
+                                          🎨 الصنف: {variant.variant_name}
+                                        </p>
+                                      )}
+                                      <div className="flex items-center gap-3 mt-2 text-xs text-gray-600">
+                                        <span>
+                                          الكمية:{" "}
+                                          <strong className="text-gray-900">
+                                            {item.qty}
+                                          </strong>
+                                        </span>
+                                        <span>•</span>
+                                        <span>
+                                          السعر:{" "}
+                                          <strong className="text-gray-900">
+                                            {formatCurrency(
+                                              item.price_at_order
+                                            )}
+                                          </strong>
+                                        </span>
+                                      </div>
+                                    </div>
+                                    <div className="text-right ml-3">
+                                      <p className="text-base font-bold text-blue-600">
+                                        {formatCurrency(
+                                          item.price_at_order * item.qty
+                                        )}
                                       </p>
-                                    )}
-                                    <div className="flex items-center gap-3 mt-2 text-xs text-gray-600">
-                                      <span>الكمية: <strong className="text-gray-900">{item.qty}</strong></span>
-                                      <span>•</span>
-                                      <span>السعر: <strong className="text-gray-900">{formatCurrency(item.price_at_order)}</strong></span>
+                                      {item.payment_method === "points" && (
+                                        <p className="text-xs text-orange-600 mt-1">
+                                          💎 نقاط
+                                        </p>
+                                      )}
                                     </div>
                                   </div>
-                                  <div className="text-right ml-3">
-                                    <p className="text-base font-bold text-blue-600">
-                                      {formatCurrency(item.price_at_order * item.qty)}
-                                    </p>
-                                    {item.payment_method === "points" && (
-                                      <p className="text-xs text-orange-600 mt-1">
-                                        💎 نقاط
-                                      </p>
-                                    )}
-                                  </div>
                                 </div>
-                              </div>
-                            );
-                          })}
+                              );
+                            })}
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      )}
 
-                  {/* Payment Info */}
-                  {delivery.orders.points_used &&
-                    delivery.orders.points_used > 0 && (
-                      <div className="mb-4 p-3 bg-blue-50 rounded-lg">
-                        <p className="text-sm text-blue-600 flex items-center">
-                          <Coins className="h-4 w-4 mr-2" />
-                          <span>
-                            تم استخدام {delivery.orders.points_used} نقطة
-                            {delivery.orders.cash_amount &&
-                              delivery.orders.cash_amount > 0 &&
-                              ` + ${formatCurrency(
-                                delivery.orders.cash_amount
-                              )} نقداً`}
-                          </span>
-                        </p>
-                      </div>
-                    )}
+                    {/* Payment Info */}
+                    {delivery.orders.points_used &&
+                      delivery.orders.points_used > 0 && (
+                        <div className="mb-4 p-3 bg-blue-50 rounded-lg">
+                          <p className="text-sm text-blue-600 flex items-center">
+                            <Coins className="h-4 w-4 mr-2" />
+                            <span>
+                              تم استخدام {delivery.orders.points_used} نقطة
+                              {delivery.orders.cash_amount &&
+                                delivery.orders.cash_amount > 0 &&
+                                ` + ${formatCurrency(
+                                  delivery.orders.cash_amount
+                                )} نقداً`}
+                            </span>
+                          </p>
+                        </div>
+                      )}
 
                     {/* Action Buttons - Enhanced & Mobile Optimized */}
                     <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 pt-4 border-t border-gray-200">
@@ -632,7 +649,8 @@ export default function DriverDashboard() {
                           <span>إتمام التوصيل</span>
                         </button>
                       )}
-                      {(delivery.status === "assigned" || delivery.status === "on_way") && (
+                      {(delivery.status === "assigned" ||
+                        delivery.status === "on_way") && (
                         <a
                           href={`https://www.google.com/maps/dir/?api=1&destination=${delivery.orders.lat},${delivery.orders.lng}`}
                           target="_blank"
@@ -645,8 +663,6 @@ export default function DriverDashboard() {
                       )}
                     </div>
                   </div>
-                </div>
-              ))
                 </div>
               ))
             )}
@@ -828,4 +844,3 @@ export default function DriverDashboard() {
     </div>
   );
 }
-
