@@ -1,11 +1,12 @@
 // ==========================================
-// ENHANCED CHECKOUT API - WITH VARIANT STOCK VALIDATION
+// ENHANCED CHECKOUT API - WITH CART LIMITS VALIDATION
 // Replace: src/app/api/checkout/route.ts
 // ==========================================
 
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
+import { CART_LIMITS, validateCartForCheckout } from "@/lib/cart-limits.config";
 
 // Utility functions (inline to avoid import issues)
 function calculateDeliveryFee(distance: number, totalPrice: number): number {
@@ -37,7 +38,7 @@ export async function POST(request: Request) {
 
   try {
     console.log("\n===========================================");
-    console.log("🚀 CHECKOUT API STARTED (WITH VARIANT SUPPORT)");
+    console.log("🚀 CHECKOUT API STARTED (WITH CART LIMITS)");
     console.log("===========================================\n");
 
     const supabase = await createClient();
@@ -66,7 +67,7 @@ export async function POST(request: Request) {
     let body;
     try {
       body = await request.json();
-      console.log("📦 Request received with", body.items?.length || 0, "items");
+      console.log("📦 Request received with", body.items?.length || 0, "unique items");
     } catch (e) {
       console.error("❌ Invalid JSON body");
       return NextResponse.json({ error: "بيانات غير صحيحة" }, { status: 400 });
@@ -93,7 +94,80 @@ export async function POST(request: Request) {
     console.log("✅ Basic validation passed");
 
     // ============================================
-    // 4. VERIFY PRODUCTS & VARIANTS IN DATABASE
+    // 4. 🔥 NEW: VALIDATE CART LIMITS (BACKEND)
+    // ============================================
+    console.log("\n🛡️ Validating cart limits (backend security)...");
+
+    // Calculate total quantities
+    const totalItemCount = items.reduce((sum, item) => sum + item.quantity, 0);
+    
+    // Calculate subtotal (before fees)
+    const subtotalPrice = items.reduce(
+      (sum, item) => sum + item.product.price * item.quantity,
+      0
+    );
+
+    console.log(`Total items in cart: ${totalItemCount}`);
+    console.log(`Subtotal: ${subtotalPrice.toLocaleString()} SYP`);
+
+    // Validate total items limit
+    if (totalItemCount > CART_LIMITS.MAX_TOTAL_ITEMS) {
+      console.error(`❌ Cart exceeds max items: ${totalItemCount} > ${CART_LIMITS.MAX_TOTAL_ITEMS}`);
+      return NextResponse.json(
+        {
+          error: "السلة تحتوي على عدد كبير من المنتجات",
+          message: `الحد الأقصى ${CART_LIMITS.MAX_TOTAL_ITEMS} منتج`,
+        },
+        { status: 400 }
+      );
+    }
+
+    // Validate quantity per product
+    for (const item of items) {
+      if (item.quantity > CART_LIMITS.MAX_QUANTITY_PER_PRODUCT) {
+        console.error(
+          `❌ Product quantity exceeds limit: ${item.product.name} (${item.quantity} > ${CART_LIMITS.MAX_QUANTITY_PER_PRODUCT})`
+        );
+        return NextResponse.json(
+          {
+            error: "كمية غير مسموحة",
+            message: `الحد الأقصى ${CART_LIMITS.MAX_QUANTITY_PER_PRODUCT} وحدات للمنتج الواحد`,
+          },
+          { status: 400 }
+        );
+      }
+
+      // Validate quantity is positive integer
+      if (!Number.isInteger(item.quantity) || item.quantity < 1) {
+        console.error(`❌ Invalid quantity: ${item.quantity}`);
+        return NextResponse.json(
+          { error: "الكمية غير صحيحة" },
+          { status: 400 }
+        );
+      }
+    }
+
+    // Calculate delivery and commission BEFORE order value check
+    const deliveryFee = calculateDeliveryFee(1, subtotalPrice);
+    const platformCommission = calculatePlatformCommission(subtotalPrice);
+    const totalWithFees = subtotalPrice + deliveryFee + platformCommission;
+
+    // Validate order value (including fees for accurate limit)
+    if (totalWithFees > CART_LIMITS.MAX_ORDER_VALUE_SYP) {
+      console.error(`❌ Order value exceeds limit: ${totalWithFees.toLocaleString()} > ${CART_LIMITS.MAX_ORDER_VALUE_SYP.toLocaleString()}`);
+      return NextResponse.json(
+        {
+          error: "قيمة الطلب تتجاوز الحد الأقصى المسموح",
+          message: `الحد الأقصى ${(CART_LIMITS.MAX_ORDER_VALUE_SYP / 1000).toLocaleString()} ألف ليرة`,
+        },
+        { status: 400 }
+      );
+    }
+
+    console.log("✅ All cart limits validated successfully");
+
+    // ============================================
+    // 5. VERIFY PRODUCTS & VARIANTS IN DATABASE
     // ============================================
     console.log("\n🔍 Verifying products and variants...");
 
@@ -164,7 +238,7 @@ export async function POST(request: Request) {
     console.log("✅ All products verified and active");
 
     // ============================================
-    // 5. VALIDATE STOCK (CRITICAL - VARIANT LEVEL)
+    // 6. VALIDATE STOCK (CRITICAL - VARIANT LEVEL)
     // ============================================
     console.log("\n📊 Checking stock at variant level...");
 
@@ -262,25 +336,17 @@ export async function POST(request: Request) {
     console.log("✅ All stock checks passed");
 
     // ============================================
-    // 6. CALCULATE TOTALS
+    // 7. CALCULATE TOTALS (using pre-calculated values)
     // ============================================
     console.log("\n💰 Calculating totals...");
 
-    const totalPrice = items.reduce(
-      (sum, item) => sum + item.product.price * item.quantity,
-      0
-    );
-
-    const deliveryFee = calculateDeliveryFee(1, totalPrice);
-    const platformCommission = calculatePlatformCommission(totalPrice);
-
-    console.log("Subtotal:", totalPrice);
+    console.log("Subtotal:", subtotalPrice);
     console.log("Delivery:", deliveryFee);
     console.log("Commission:", platformCommission);
-    console.log("Grand Total:", totalPrice + deliveryFee + platformCommission);
+    console.log("Grand Total:", totalWithFees);
 
     // ============================================
-    // 7. VALIDATE PAYMENT (Points vs Cash)
+    // 8. VALIDATE PAYMENT (Points vs Cash)
     // ============================================
     console.log("\n💳 Validating payment...");
 
@@ -329,7 +395,7 @@ export async function POST(request: Request) {
     console.log("Payment method:", paymentMethod);
 
     // ============================================
-    // 8. RESERVE STOCK ATOMICALLY (CRITICAL)
+    // 9. RESERVE STOCK ATOMICALLY (CRITICAL)
     // ============================================
     console.log("\n🔒 Reserving stock atomically...");
 
@@ -453,13 +519,13 @@ export async function POST(request: Request) {
     console.log("✅ All stock reserved successfully");
 
     // ============================================
-    // 9. CREATE ORDER
+    // 10. CREATE ORDER
     // ============================================
     console.log("\n📝 Creating order...");
 
     const orderData = {
       user_id: user.id,
-      total_price: totalPrice + deliveryFee + platformCommission,
+      total_price: totalWithFees,
       delivery_fee: deliveryFee,
       platform_commission: platformCommission,
       address_text: deliveryAddress.trim(),
@@ -508,7 +574,7 @@ export async function POST(request: Request) {
     console.log("✅ Order created:", order.id);
 
     // ============================================
-    // 10. CREATE ORDER ITEMS
+    // 11. CREATE ORDER ITEMS
     // ============================================
     console.log("\n📦 Creating order items...");
 
@@ -563,7 +629,7 @@ export async function POST(request: Request) {
     console.log("✅ Order items created:", createdItems?.length || 0);
 
     // ============================================
-    // 11. DEDUCT POINTS (if applicable)
+    // 12. DEDUCT POINTS (if applicable)
     // ============================================
     if (pointsToDeduct > 0) {
       console.log("\n💎 Deducting points:", pointsToDeduct);
@@ -612,7 +678,7 @@ export async function POST(request: Request) {
     }
 
     // ============================================
-    // 12. 🔥 REVALIDATE CACHE - CRITICAL FOR STOCK UPDATES
+    // 13. 🔥 REVALIDATE CACHE - CRITICAL FOR STOCK UPDATES
     // ============================================
     console.log("\n🔄 Revalidating cache for stock updates...");
     try {
@@ -634,7 +700,7 @@ export async function POST(request: Request) {
     }
 
     // ============================================
-    // 13. SUCCESS RESPONSE
+    // 14. SUCCESS RESPONSE
     // ============================================
     const duration = Date.now() - startTime;
     const potentialPoints =
@@ -643,6 +709,8 @@ export async function POST(request: Request) {
     console.log("\n===========================================");
     console.log("🎉 CHECKOUT COMPLETED SUCCESSFULLY");
     console.log("Order ID:", order.id);
+    console.log("Total Items:", totalItemCount);
+    console.log("Order Value:", totalWithFees.toLocaleString(), "SYP");
     console.log("Duration:", duration, "ms");
     console.log("===========================================\n");
 
@@ -660,7 +728,7 @@ export async function POST(request: Request) {
         cashAmount: cashAmount + deliveryFee + platformCommission,
         deliveryFee,
         platformCommission,
-        totalAmount: totalPrice + deliveryFee + platformCommission,
+        totalAmount: totalWithFees,
       },
     });
   } catch (error) {
