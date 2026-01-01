@@ -1,7 +1,9 @@
 // ==========================================
-// VALIDATION LIBRARY
-// Save as: src/lib/validation.ts
+// VALIDATION LIBRARY - ENHANCED WITH CART LIMITS
+// Replace: src/lib/validation.ts
 // ==========================================
+
+import { CART_LIMITS, CART_LIMIT_MESSAGES } from "./cart-limits.config";
 
 /**
  * Validate and sanitize address
@@ -167,7 +169,8 @@ export function validatePrice(price: number): {
 }
 
 /**
- * Validate quantity
+ * Validate quantity - UPDATED with cart limits
+ * Uses the configurable MAX_QUANTITY_PER_PRODUCT from cart-limits.config
  */
 export function validateQuantity(qty: number): {
   isValid: boolean;
@@ -181,8 +184,49 @@ export function validateQuantity(qty: number): {
     return { isValid: false, error: "الكمية يجب أن تكون 1 على الأقل" };
   }
 
-  if (qty > 100) {
-    return { isValid: false, error: "الكمية يجب أن تكون 100 كحد أقصى" };
+  // Use the configurable limit instead of hardcoded 100
+  if (qty > CART_LIMITS.MAX_QUANTITY_PER_PRODUCT) {
+    return { 
+      isValid: false, 
+      error: CART_LIMIT_MESSAGES.MAX_QUANTITY_PER_PRODUCT 
+    };
+  }
+
+  return { isValid: true };
+}
+
+/**
+ * NEW: Validate cart totals before checkout
+ */
+export function validateCartTotals(
+  totalItems: number,
+  totalPrice: number
+): {
+  isValid: boolean;
+  error?: string;
+} {
+  // Check total items limit
+  if (totalItems > CART_LIMITS.MAX_TOTAL_ITEMS) {
+    return {
+      isValid: false,
+      error: CART_LIMIT_MESSAGES.MAX_TOTAL_ITEMS,
+    };
+  }
+
+  // Check max order value
+  if (totalPrice > CART_LIMITS.MAX_ORDER_VALUE_SYP) {
+    return {
+      isValid: false,
+      error: CART_LIMIT_MESSAGES.MAX_ORDER_VALUE,
+    };
+  }
+
+  // Check min order value (if applicable)
+  if (totalPrice < CART_LIMITS.MIN_ORDER_VALUE_SYP) {
+    return {
+      isValid: false,
+      error: CART_LIMIT_MESSAGES.MIN_ORDER_VALUE,
+    };
   }
 
   return { isValid: true };
