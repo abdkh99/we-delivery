@@ -82,6 +82,39 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "السلة فارغة" }, { status: 400 });
     }
 
+    // 🔥 FIX: Validate item structure and normalize data
+    console.log("\n🔍 Validating and normalizing cart items...");
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      
+      if (!item.product || !item.product.id) {
+        console.error(`❌ Item ${i} missing product or product.id`);
+        return NextResponse.json(
+          { error: "بيانات غير صحيحة", message: "بعض العناصر في السلة غير صحيحة" },
+          { status: 400 }
+        );
+      }
+      
+      if (!item.quantity || item.quantity <= 0) {
+        console.error(`❌ Item ${i} has invalid quantity: ${item.quantity}`);
+        return NextResponse.json(
+          { error: "كمية غير صحيحة", message: "يرجى التحقق من الكميات في السلة" },
+          { status: 400 }
+        );
+      }
+      
+      // Log item structure for debugging (especially on mobile)
+      console.log(`Item ${i}:`, {
+        productId: item.product.id,
+        productName: item.product.name,
+        variantId: item.variantId || "none",
+        masterProductId: item.masterProductId || "none",
+        quantity: item.quantity,
+      });
+    }
+    
+    console.log("✅ All items validated");
+
     if (!deliveryAddress?.trim() || !deliveryLat || !deliveryLng) {
       console.error("❌ Missing delivery info");
       return NextResponse.json(
@@ -259,55 +292,152 @@ export async function POST(request: Request) {
     // ============================================
     console.log("\n📊 Checking stock at variant level...");
 
+    // 🔥 FIX: Build a map of all variants for quick lookup
+    const variantMap = new Map<string, any>();
+    uniqueProducts.forEach((p: any) => {
+      if (p.product_variants && Array.isArray(p.product_variants)) {
+        p.product_variants.forEach((v: any) => {
+          variantMap.set(v.id, { ...v, master_product_id: p.id });
+        });
+      }
+    });
+
+    // 🔥 FIX: Store resolved variant IDs for each item (for use in stock reservation)
+    const itemVariantMap = new Map<number, { variantId: string | null; productId: string }>();
+    let itemIndex = 0;
+
     for (const item of items) {
-      // 🔥 FIX: First try to find product by masterProductId (for variant items)
-      // Then fall back to product.id for non-variant items
+      console.log(`\n🔍 Processing item:`, {
+        productId: item.product.id,
+        productName: item.product.name,
+        variantId: item.variantId,
+        masterProductId: item.masterProductId,
+        quantity: item.quantity,
+      });
+
+      // 🔥 FIX: Enhanced product lookup logic
       let dbProduct: any = null;
+      let actualVariantId: string | null = null;
       
+      // Strategy 1: Use masterProductId if available (most reliable)
       if (item?.masterProductId) {
         dbProduct = uniqueProducts.find((p: any) => p.id === item.masterProductId);
-      } else {
-        dbProduct = uniqueProducts.find((p: any) => p.id === item.product.id);
+        if (dbProduct) {
+          console.log(`✅ Found product via masterProductId: ${dbProduct.name}`);
+        }
       }
       
-      // If still not found and we have a variantId, try to find via variant's master_product_id
+      // Strategy 2: If we have variantId but no product found yet, look up variant first
       if (!dbProduct && item.variantId) {
-        const variant = uniqueProducts
-          .flatMap((p: any) => p.product_variants || [])
-          .find((v: any) => v.id === item.variantId);
-        
+        const variant = variantMap.get(item.variantId);
         if (variant && variant.master_product_id) {
           dbProduct = uniqueProducts.find((p: any) => p.id === variant.master_product_id);
+          actualVariantId = item.variantId;
+          if (dbProduct) {
+            console.log(`✅ Found product via variant lookup: ${dbProduct.name} (variant: ${variant.variant_name})`);
+          }
+        }
+      }
+      
+      // Strategy 3: Check if item.product.id is actually a variant ID (mobile/old cart issue)
+      if (!dbProduct) {
+        const possibleVariant = variantMap.get(item.product.id);
+        if (possibleVariant && possibleVariant.master_product_id) {
+          dbProduct = uniqueProducts.find((p: any) => p.id === possibleVariant.master_product_id);
+          actualVariantId = item.product.id; // The product.id was actually a variant ID
+          if (dbProduct) {
+            console.log(`✅ Found product - item.product.id was actually a variant ID: ${dbProduct.name}`);
+          }
+        }
+      }
+      
+      // Strategy 4: Try direct product lookup (for non-variant items)
+      if (!dbProduct) {
+        dbProduct = uniqueProducts.find((p: any) => p.id === item.product.id);
+        if (dbProduct) {
+          console.log(`✅ Found product via direct lookup: ${dbProduct.name}`);
+        }
+      }
+      
+      // Strategy 5: If we still have variantId but no product, query database directly
+      if (!dbProduct && item.variantId) {
+        console.log(`⚠️ Product not found in cache, querying database for variant: ${item.variantId}`);
+        const { data: variantData, error: variantError } = await supabase
+          .from("product_variants")
+          .select("master_product_id, variant_name")
+          .eq("id", item.variantId)
+          .single();
+        
+        if (!variantError && variantData?.master_product_id) {
+          dbProduct = uniqueProducts.find((p: any) => p.id === variantData.master_product_id);
+          actualVariantId = item.variantId;
+          if (dbProduct) {
+            console.log(`✅ Found product via database query: ${dbProduct.name}`);
+            // Add variant to product if not already there
+            if (!dbProduct.product_variants) {
+              dbProduct.product_variants = [];
+            }
+            const variantExists = dbProduct.product_variants.some((v: any) => v.id === item.variantId);
+            if (!variantExists) {
+              const { data: fullVariant } = await supabase
+                .from("product_variants")
+                .select("*")
+                .eq("id", item.variantId)
+                .single();
+              if (fullVariant) {
+                dbProduct.product_variants.push(fullVariant);
+              }
+            }
+          }
         }
       }
 
-      // If still not found, log and skip
+      // If still not found, return error with detailed logging
       if (!dbProduct) {
         console.error(
-          `❌ Product not found for item: product.id=${item.product.id}, variantId=${item.variantId}`
+          `❌ Product not found for item:`,
+          JSON.stringify({
+            productId: item.product.id,
+            productName: item.product.name,
+            variantId: item.variantId,
+            masterProductId: item.masterProductId,
+            availableProductIds: uniqueProducts.map((p: any) => p.id),
+            availableVariantIds: Array.from(variantMap.keys()),
+          }, null, 2)
         );
         return NextResponse.json(
           {
             error: "بعض المنتجات غير متوفرة",
-            message: `المنتج ${item.product.name || "غير معروف"} غير متوفر حالياً`,
+            message: `المنتج ${item.product.name || "غير معروف"} غير متوفر حالياً. يرجى تحديث السلة والمحاولة مرة أخرى.`,
+            details: "Product lookup failed - item may be from old cart format",
           },
           { status: 400 }
         );
       }
+      
+      // Use the actual variant ID if we found it
+      const finalVariantId = actualVariantId || item.variantId;
+      
+      // Store the resolved variant ID and product ID for this item
+      itemVariantMap.set(itemIndex, {
+        variantId: finalVariantId,
+        productId: dbProduct.id,
+      });
 
       // Check if this item uses a variant
-      if (item.variantId) {
+      if (finalVariantId) {
         console.log(
-          `Checking variant ${item.variantId} for product ${dbProduct.name}`
+          `Checking variant ${finalVariantId} for product ${dbProduct.name}`
         );
 
         // Find the variant
         const variant = (dbProduct.product_variants || []).find(
-          (v: any) => v.id === item.variantId
+          (v: any) => v.id === finalVariantId
         );
 
         if (!variant) {
-          console.error("❌ Variant not found:", item.variantId);
+          console.error("❌ Variant not found:", finalVariantId);
+          console.error("Available variants:", dbProduct.product_variants?.map((v: any) => v.id));
           return NextResponse.json(
             {
               error: "النكهة المختارة غير متوفرة",
@@ -398,6 +528,8 @@ export async function POST(request: Request) {
           `✅ Product stock OK: ${dbProduct.name} (${dbProduct.stock_estimate} available)`
         );
       }
+      
+      itemIndex++;
     }
 
     console.log("✅ All stock checks passed");
@@ -476,13 +608,19 @@ export async function POST(request: Request) {
 
     const reservedItems: any[] = [];
 
-    for (const item of items) {
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      const resolvedItem = itemVariantMap.get(i);
+      
       try {
-        if (item.variantId) {
+        // Use the variant ID we determined earlier during validation
+        const variantIdToReserve = resolvedItem?.variantId || item.variantId;
+        
+        if (variantIdToReserve) {
           // Reserve variant stock
           const { data: reserveResult, error: reserveError } =
             await supabase.rpc("reserve_variant_stock", {
-              p_variant_id: item.variantId,
+              p_variant_id: variantIdToReserve,
               p_quantity: item.quantity,
             });
 
@@ -517,9 +655,9 @@ export async function POST(request: Request) {
           }
 
           reservedItems.push({
-            variantId: item.variantId,
+            variantId: variantIdToReserve,
             quantity: item.quantity,
-            productId: item.product.id,
+            productId: resolvedItem?.productId || item.product.id,
           });
 
           console.log(
@@ -564,7 +702,7 @@ export async function POST(request: Request) {
           }
 
           reservedItems.push({
-            productId: item.product.id,
+            productId: resolvedItem?.productId || item.product.id,
             quantity: item.quantity,
           });
 
@@ -659,19 +797,11 @@ export async function POST(request: Request) {
     // ============================================
     console.log("\n📦 Creating order items...");
 
-    const orderItems = items.map((item) => {
-      // 🔥 FIX: Get the correct product ID (master product ID if variant exists)
-      let productId = item.product.id;
-      
-      if (item.variantId) {
-        const variant = uniqueProducts
-          .flatMap((p: any) => p.product_variants || [])
-          .find((v: any) => v.id === item.variantId);
-        
-        if (variant && variant.master_product_id) {
-          productId = variant.master_product_id;
-        }
-      }
+    const orderItems = items.map((item, index) => {
+      // 🔥 FIX: Get the correct product ID from our resolved mapping
+      const resolvedItem = itemVariantMap.get(index);
+      const productId = resolvedItem?.productId || item.product.id;
+      const variantId = resolvedItem?.variantId || item.variantId || null;
 
       return {
         order_id: order.id,
@@ -679,7 +809,7 @@ export async function POST(request: Request) {
         qty: item.quantity,
         price_at_order: item.product.price,
         payment_method: item.paymentMethod || "cash",
-        variant_id: item.variantId || null,
+        variant_id: variantId,
       };
     });
 

@@ -156,14 +156,28 @@ export default function CartPage() {
 
     const checkoutData = {
       items: items.map((item) => {
-        // 🔥 FIX: Ensure we send the correct product ID
-        // For variants: use masterProductId if available, otherwise product.id
+        // 🔥 FIX: Enhanced product ID resolution
+        // For variants: use masterProductId if available
+        // If masterProductId is missing but we have variantId, we'll let the backend handle it
         // For regular products: use product.id
         let productId = item.product.id;
+        let masterProductId = item.masterProductId;
         
-        // If this item has a variant, try to use masterProductId
-        if (item.variantId && item.masterProductId) {
-          productId = item.masterProductId;
+        // If this item has a variant but no masterProductId, try to infer it
+        // Note: This is a fallback - ideally masterProductId should always be set when adding to cart
+        if (item.variantId && !masterProductId) {
+          // If product.id looks like it might be a variant ID (UUID format), 
+          // we'll let the backend handle the lookup
+          console.warn(`⚠️ Item missing masterProductId:`, {
+            productId: item.product.id,
+            variantId: item.variantId,
+            productName: item.product.name,
+          });
+        }
+        
+        // If we have masterProductId, use it as the product ID
+        if (masterProductId) {
+          productId = masterProductId;
         }
 
         return {
@@ -176,8 +190,8 @@ export default function CartPage() {
           quantity: item.quantity,
           paymentMethod: item.paymentMethod,
           variantId: item.variantId || null,
-          // 🔥 FIX: Send masterProductId separately for API to use in lookups
-          masterProductId: item.masterProductId || null,
+          // 🔥 FIX: Always send masterProductId (even if null) for API to use in lookups
+          masterProductId: masterProductId || null,
         };
       }),
       deliveryAddress: fullAddress,
