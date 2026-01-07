@@ -86,11 +86,6 @@ export function CartProvider({ children }: { children: ReactNode }) {
           (item: any) => item.variantId && !item.masterProductId
         );
 
-        // Check if cart needs migration
-        const needsMigration = parsedCart.some(
-          (item: any) => item.variantId && !item.masterProductId
-        );
-
         if (needsMigration) {
           console.log("🔄 Cart needs migration, upgrading items...");
           const migratedItems = migrateCartItems(parsedCart);
