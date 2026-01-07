@@ -121,7 +121,7 @@ export async function PUT(
 
     // 🔥 CRITICAL: Revalidate cache if stock or price changed
     const stockChanged = oldProduct && oldProduct.stock_estimate !== stock_estimate;
-    const priceChanged = oldProduct && oldProduct.price !== price;
+    
     
     if (stockChanged || priceChanged) {
       console.log(`🔄 Revalidating cache for product ${id} (stock: ${stockChanged}, price: ${priceChanged})`);

@@ -267,7 +267,8 @@ export async function POST(request: Request) {
 
       // 🔥 FIX: Use product_variants instead of product_flavors
       const variantData = flavors.map((f: any, i: number) => {
-        const variantPrice = usdPriceValue 
+        // 🔥 FIX: Ensure both usdPriceValue AND rateUsed are valid before multiplication
+        const variantPrice = usdPriceValue && rateUsed
           ? roundPrice(usdPriceValue * rateUsed)
           : finalPrice;
         

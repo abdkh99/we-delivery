@@ -130,17 +130,23 @@ export async function POST(request: Request) {
     // ============================================
     console.log("\n🔍 Verifying products and variants...");
 
-    // 🔥 FIX: Collect all product IDs (including variant IDs that might be used as product.id)
+    // 🔥 FIX: Collect all product IDs correctly
+    // For variants: use masterProductId (the actual product ID)
+    // For regular products: use product.id
     const productIds = new Set<string>();
     const variantIds = new Set<string>();
 
     items.forEach((item) => {
-      if (item?.product?.id) {
+      // If item has masterProductId (variant item), use that as the product ID
+      if (item?.masterProductId) {
+        productIds.add(item.masterProductId);
+      } else if (item?.product?.id) {
+        // For non-variant items, use product.id directly
         productIds.add(item.product.id);
       }
+      
       if (item?.variantId) {
         variantIds.add(item.variantId);
-        productIds.add(item.variantId); // Also add variant IDs in case they're used as product.id
       }
     });
 
@@ -254,10 +260,17 @@ export async function POST(request: Request) {
     console.log("\n📊 Checking stock at variant level...");
 
     for (const item of items) {
-      // 🔥 FIX: Try to find product by product.id first, or by variant's master_product_id
-      let dbProduct = uniqueProducts.find((p: any) => p.id === item.product.id);
+      // 🔥 FIX: First try to find product by masterProductId (for variant items)
+      // Then fall back to product.id for non-variant items
+      let dbProduct: any = null;
       
-      // If not found, it might be a variant ID - try to find via variant
+      if (item?.masterProductId) {
+        dbProduct = uniqueProducts.find((p: any) => p.id === item.masterProductId);
+      } else {
+        dbProduct = uniqueProducts.find((p: any) => p.id === item.product.id);
+      }
+      
+      // If still not found and we have a variantId, try to find via variant's master_product_id
       if (!dbProduct && item.variantId) {
         const variant = uniqueProducts
           .flatMap((p: any) => p.product_variants || [])
