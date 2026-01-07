@@ -3,9 +3,11 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Navigation from "@/components/Navigation";
-import { ShoppingCart, ArrowLeft, Star, Package, Truck } from "lucide-react";
+import { ShoppingCart, ArrowLeft, Star, Package, Truck, LogIn, CheckCircle, AlertCircle } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { toast } from "sonner";
+import { useCart } from "@/contexts/CartContext";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface ProductFlavor {
   id: string;
@@ -103,12 +105,32 @@ export default function ProductDetailPage({
     }
   };
 
+  // 🔥 FIX: Use CartContext instead of non-existent /api/cart
+  const { addItem } = useCart();
+  const { user } = useAuth();
+
   const handleAddToCart = async () => {
     if (!product) return;
 
+    // Check if user is logged in
+    if (!user) {
+      toast.error("يجب تسجيل الدخول أولاً! 🔐", {
+        description: "سجل دخولك للمتابعة إلى سلة التسوق",
+        icon: <LogIn className="h-5 w-5" />,
+        action: {
+          label: "تسجيل الدخول",
+          onClick: () => router.push("/login"),
+        },
+        duration: 5000,
+      });
+      return;
+    }
+
     // التحقق من اختيار النكهة (إذا كان المنتج له نكهات)
     if (product.has_flavors && !selectedFlavor) {
-      toast.error("يرجى اختيار النكهة");
+      toast.error("يرجى اختيار النكهة", {
+        icon: <AlertCircle className="h-5 w-5" />,
+      });
       return;
     }
 
@@ -118,48 +140,71 @@ export default function ProductDetailPage({
       product.product_variants.length > 0 &&
       !selectedVariant
     ) {
-      toast.error("يرجى اختيار المقاس");
+      toast.error("يرجى اختيار النكهة", {
+        icon: <AlertCircle className="h-5 w-5" />,
+      });
       return;
     }
 
     try {
       setAddingToCart(true);
 
-      const cartData: {
-        product_id: string;
-        quantity: number;
-        flavor_id?: string;
-        variant_id?: string;
-      } = {
-        product_id: product.id,
-        quantity,
-      };
+      // If product has variants, add the variant
+      if (selectedVariant && product.product_variants) {
+        const variant = product.product_variants.find(
+          (v) => v.id === selectedVariant
+        );
 
-      if (selectedFlavor) {
-        cartData.flavor_id = selectedFlavor;
+        if (!variant) {
+          toast.error("النكهة غير موجودة", {
+            icon: <AlertCircle className="h-5 w-5" />,
+          });
+          return;
+        }
+
+        if (variant.stock_estimate === 0) {
+          toast.error("النكهة غير متوفرة حالياً", {
+            icon: <AlertCircle className="h-5 w-5" />,
+          });
+          return;
+        }
+
+        // Add variant item to cart (like products page does)
+        addItem(
+          {
+            ...product,
+            id: variant.id,
+            name: `${product.name} - ${variant.variant_name}`,
+            price: variant.price,
+            stock_estimate: variant.stock_estimate || 0,
+            sku: variant.variant_sku || product.id,
+            image_url: product.image_url,
+          } as any,
+          quantity,
+          variant.id,
+          product.id // masterProductId
+        );
+      } else {
+        // Add regular product to cart
+        if (product.stock_estimate === 0) {
+          toast.error("المنتج غير متوفر حالياً", {
+            icon: <AlertCircle className="h-5 w-5" />,
+          });
+          return;
+        }
+
+        addItem(product as any, quantity);
       }
 
-      if (selectedVariant) {
-        cartData.variant_id = selectedVariant;
-      }
-
-      const response = await fetch("/api/cart", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(cartData),
+      toast.success("تمت الإضافة للسلة بنجاح! ✅", {
+        description: `تم إضافة ${product.name} إلى سلة التسوق`,
+        icon: <CheckCircle className="h-5 w-5" />,
       });
-
-      if (!response.ok) {
-        throw new Error("Failed to add to cart");
-      }
-
-      toast.success("تمت الإضافة للسلة بنجاح! ✅");
-
-      // يمكنك إعادة التوجيه للسلة أو تحديث عداد السلة
-      // router.push("/cart");
     } catch (error) {
       console.error("Error adding to cart:", error);
-      toast.error("فشل إضافة المنتج للسلة");
+      toast.error("فشل إضافة المنتج للسلة", {
+        icon: <AlertCircle className="h-5 w-5" />,
+      });
     } finally {
       setAddingToCart(false);
     }
