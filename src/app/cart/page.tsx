@@ -176,6 +176,8 @@ export default function CartPage() {
           quantity: item.quantity,
           paymentMethod: item.paymentMethod,
           variantId: item.variantId || null,
+          // 🔥 FIX: Send masterProductId separately for API to use in lookups
+          masterProductId: item.masterProductId || null,
         };
       }),
       deliveryAddress: fullAddress,

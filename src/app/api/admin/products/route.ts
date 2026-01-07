@@ -225,7 +225,8 @@ export async function POST(request: Request) {
       image_url: image_url || null,
       category,
       description: description || null,
-      has_flavors: has_flavors || false,
+      // 🔥 FIX: Column name is 'has_variants' not 'has_flavors'
+      has_variants: has_flavors || false,
     };
 
     if (usdPriceValue !== null) {
