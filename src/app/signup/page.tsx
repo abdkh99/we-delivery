@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
-import { Package, Eye, EyeOff } from "lucide-react";
+import { Package, Eye, EyeOff, Wifi, WifiOff } from "lucide-react";
+import { withRetry, isNetworkError, getNetworkErrorMessage } from "@/lib/network-utils";
 
 export default function SignupPage() {
   const [name, setName] = useState("");
@@ -18,8 +19,24 @@ export default function SignupPage() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [passwordStrength, setPasswordStrength] = useState("");
+  const [isRetrying, setIsRetrying] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
+  const [isOnline, setIsOnline] = useState(true);
   const router = useRouter();
   const supabase = createClient();
+
+  // Check online status
+  useEffect(() => {
+    setIsOnline(navigator.onLine);
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
+  }, []);
 
   // Check password strength
   const checkPasswordStrength = (pass: string) => {
@@ -109,13 +126,34 @@ export default function SignupPage() {
       return;
     }
 
+    // Check if offline
+    if (!navigator.onLine) {
+      setError("لا يوجد اتصال بالإنترنت. يرجى التحقق من اتصالك والمحاولة مرة أخرى");
+      setLoading(false);
+      return;
+    }
+
     try {
-      // Check if username is unique
-      const { data: existingUser } = await supabase
-        .from("users")
-        .select("username")
-        .eq("username", username.toLowerCase())
-        .maybeSingle();
+      // Check if username is unique with retry logic
+      const { data: existingUser } = await withRetry(
+        async () => {
+          const result = await supabase
+            .from("users")
+            .select("username")
+            .eq("username", username.toLowerCase())
+            .maybeSingle();
+          return result.data;
+        },
+        {
+          maxRetries: 2,
+          timeout: 20000,
+          retryDelay: 1500,
+        },
+        (attempt) => {
+          setIsRetrying(true);
+          setRetryCount(attempt);
+        }
+      );
 
       if (existingUser) {
         setError("اسم المستخدم محجوز. يرجى اختيار اسم آخر");
@@ -126,22 +164,35 @@ export default function SignupPage() {
       // Create email from username (Supabase requires email for auth)
       const generatedEmail = `${username.toLowerCase()}@estore.local`;
 
-      // Sign up with Supabase Auth
-      // Note: Email confirmation should be disabled in Supabase Dashboard
-      // Go to: Authentication → Providers → Email → Confirm email: OFF
-      const { data, error } = await supabase.auth.signUp({
-        email: generatedEmail,
-        password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
-          data: {
-            full_name: name,
-            name: name,
-            username: username.toLowerCase(),
-            phone: fullPhone,
-          },
+      // Sign up with Supabase Auth with retry logic
+      const { data, error } = await withRetry(
+        async () => {
+          const result = await supabase.auth.signUp({
+            email: generatedEmail,
+            password,
+            options: {
+              emailRedirectTo: `${window.location.origin}/auth/callback`,
+              data: {
+                full_name: name,
+                name: name,
+                username: username.toLowerCase(),
+                phone: fullPhone,
+              },
+            },
+          });
+          if (result.error) throw result.error;
+          return result;
         },
-      });
+        {
+          maxRetries: 2,
+          timeout: 30000, // 30 seconds
+          retryDelay: 2000,
+        },
+        (attempt) => {
+          setIsRetrying(true);
+          setRetryCount(attempt);
+        }
+      );
 
       if (error) {
         // Better error messages
@@ -150,38 +201,59 @@ export default function SignupPage() {
         } else if (error.message.includes("Invalid email")) {
           setError("حدث خطأ في التسجيل. يرجى المحاولة مرة أخرى");
         } else {
-          setError(error.message);
+          setError(getNetworkErrorMessage(error));
         }
         setLoading(false);
         return;
       }
 
-      if (data.user) {
+      if (data?.user) {
         // Wait for profile to be created by trigger, with verification
         let profileReady = false;
         for (let i = 0; i < 5; i++) {
           await new Promise((resolve) => setTimeout(resolve, 500));
-          const { data: profile } = await supabase
-            .from("users")
-            .select("id")
-            .eq("id", data.user.id)
-            .maybeSingle();
-          if (profile) {
-            profileReady = true;
-            break;
+          try {
+            const { data: profile } = await supabase
+              .from("users")
+              .select("id")
+              .eq("id", data.user.id)
+              .maybeSingle();
+            if (profile) {
+              profileReady = true;
+              break;
+            }
+          } catch (err) {
+            // Continue retrying
+            console.log("Profile check attempt", i + 1);
           }
         }
 
         if (!profileReady) {
           // Fallback: create profile manually if trigger failed
-          await supabase.from("users").insert({
-            id: data.user.id,
-            name: name,
-            username: username.toLowerCase(),
-            phone: fullPhone,
-            email: `${username.toLowerCase()}@estore.local`,
-            role: "customer",
-          });
+          try {
+            await withRetry(
+              async () => {
+                const result = await supabase.from("users").insert({
+                  id: data.user.id,
+                  name: name,
+                  username: username.toLowerCase(),
+                  phone: fullPhone,
+                  email: `${username.toLowerCase()}@estore.local`,
+                  role: "customer",
+                });
+                if (result.error) throw result.error;
+                return result;
+              },
+              {
+                maxRetries: 2,
+                timeout: 20000,
+                retryDelay: 1500,
+              }
+            );
+          } catch (err) {
+            console.error("Failed to create profile:", err);
+            // Continue anyway - profile might have been created by trigger
+          }
         }
 
         // Redirect to home page
@@ -190,9 +262,15 @@ export default function SignupPage() {
       }
     } catch (err: unknown) {
       console.error("Signup error:", err);
-      setError("حدث خطأ غير متوقع. يرجى المحاولة مرة أخرى");
+      if (isNetworkError(err)) {
+        setError(getNetworkErrorMessage(err));
+      } else {
+        setError("حدث خطأ غير متوقع. يرجى المحاولة مرة أخرى");
+      }
     } finally {
       setLoading(false);
+      setIsRetrying(false);
+      setRetryCount(0);
     }
   };
 
@@ -253,6 +331,20 @@ export default function SignupPage() {
             <p className="mt-2 text-sm text-gray-600">
               انضم إلينا واستمتع بتجربة تسوق فريدة
             </p>
+            
+            {/* Network Status Indicator */}
+            {!isOnline && (
+              <div className="mt-4 inline-flex items-center gap-2 px-3 py-1.5 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+                <WifiOff className="h-4 w-4" />
+                <span>لا يوجد اتصال بالإنترنت</span>
+              </div>
+            )}
+            {isRetrying && (
+              <div className="mt-4 inline-flex items-center gap-2 px-3 py-1.5 bg-yellow-50 border border-yellow-200 rounded-lg text-yellow-700 text-sm">
+                <Wifi className="h-4 w-4 animate-pulse" />
+                <span>جاري إعادة المحاولة... ({retryCount}/2)</span>
+              </div>
+            )}
           </div>
 
           <form className="space-y-6" onSubmit={handleSubmit}>
@@ -438,14 +530,22 @@ export default function SignupPage() {
             <div>
               <button
                 type="submit"
-                disabled={loading}
-                className="w-full flex justify-center py-3.5 px-4 border border-transparent rounded-xl shadow-lg text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 transform hover:-translate-y-0.5"
+                disabled={loading || !isOnline}
+                className="w-full flex justify-center items-center gap-2 py-3.5 px-4 border border-transparent rounded-xl shadow-lg text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 transform hover:-translate-y-0.5"
               >
                 {loading ? (
-                  <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
+                  <>
+                    <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    {isRetrying ? "جاري إعادة المحاولة..." : "جاري إنشاء الحساب..."}
+                  </>
+                ) : !isOnline ? (
+                  <>
+                    <WifiOff className="h-5 w-5" />
+                    لا يوجد اتصال بالإنترنت
+                  </>
                 ) : (
                   "إنشاء الحساب"
                 )}

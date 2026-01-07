@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
-import { Eye, EyeOff, ShoppingBag, Lock, User, ArrowRight } from "lucide-react";
+import { Eye, EyeOff, ShoppingBag, Lock, User, ArrowRight, Wifi, WifiOff } from "lucide-react";
+import { withRetry, isNetworkError, getNetworkErrorMessage } from "@/lib/network-utils";
 
 export default function LoginPage() {
   const [username, setUsername] = useState("");
@@ -13,8 +14,24 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [isRetrying, setIsRetrying] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
+  const [isOnline, setIsOnline] = useState(true);
   const router = useRouter();
   const supabase = createClient();
+
+  // Check online status
+  useEffect(() => {
+    setIsOnline(navigator.onLine);
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,14 +52,37 @@ export default function LoginPage() {
       return;
     }
 
+    // Check if offline
+    if (!navigator.onLine) {
+      setError("لا يوجد اتصال بالإنترنت. يرجى التحقق من اتصالك والمحاولة مرة أخرى");
+      setLoading(false);
+      return;
+    }
+
     try {
       // Generate email from username (same as signup)
       const generatedEmail = `${username.toLowerCase()}@estore.local`;
 
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: generatedEmail,
-        password,
-      });
+      // Use retry logic with timeout for slow connections
+      const { data, error } = await withRetry(
+        async () => {
+          const result = await supabase.auth.signInWithPassword({
+            email: generatedEmail,
+            password,
+          });
+          if (result.error) throw result.error;
+          return result;
+        },
+        {
+          maxRetries: 2,
+          timeout: 30000, // 30 seconds
+          retryDelay: 2000,
+        },
+        (attempt) => {
+          setIsRetrying(true);
+          setRetryCount(attempt);
+        }
+      );
 
       if (error) {
         // Better error messages
@@ -57,13 +97,13 @@ export default function LoginPage() {
         } else if (error.message.includes("User not found")) {
           setError("المستخدم غير موجود. يرجى التسجيل أولاً");
         } else {
-          setError(`فشل تسجيل الدخول: ${error.message}`);
+          setError(getNetworkErrorMessage(error));
         }
         setLoading(false);
         return;
       }
 
-      if (data.user) {
+      if (data?.user) {
         // Give AuthContext time to pick up the session change
         await new Promise((resolve) => setTimeout(resolve, 100));
         // Successfully logged in
@@ -72,9 +112,15 @@ export default function LoginPage() {
       }
     } catch (err: unknown) {
       console.error("Login error:", err);
-      setError("حدث خطأ غير متوقع. يرجى المحاولة مرة أخرى");
+      if (isNetworkError(err)) {
+        setError(getNetworkErrorMessage(err));
+      } else {
+        setError("حدث خطأ غير متوقع. يرجى المحاولة مرة أخرى");
+      }
     } finally {
       setLoading(false);
+      setIsRetrying(false);
+      setRetryCount(0);
     }
   };
 
@@ -142,6 +188,20 @@ export default function LoginPage() {
             <p className="text-gray-600 text-base">
               سجل دخولك للوصول إلى حسابك ومتابعة التسوق
             </p>
+            
+            {/* Network Status Indicator */}
+            {!isOnline && (
+              <div className="mt-4 inline-flex items-center gap-2 px-3 py-1.5 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+                <WifiOff className="h-4 w-4" />
+                <span>لا يوجد اتصال بالإنترنت</span>
+              </div>
+            )}
+            {isRetrying && (
+              <div className="mt-4 inline-flex items-center gap-2 px-3 py-1.5 bg-yellow-50 border border-yellow-200 rounded-lg text-yellow-700 text-sm">
+                <Wifi className="h-4 w-4 animate-pulse" />
+                <span>جاري إعادة المحاولة... ({retryCount}/2)</span>
+              </div>
+            )}
           </div>
 
           <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
@@ -261,7 +321,7 @@ export default function LoginPage() {
             {/* زر تسجيل الدخول */}
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || !isOnline}
               className="group relative w-full flex justify-center items-center gap-2 py-4 px-4 border border-transparent text-base font-semibold rounded-xl text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 focus:outline-none focus:ring-4 focus:ring-blue-300 disabled:opacity-50 disabled:cursor-not-allowed transform transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] shadow-lg hover:shadow-xl"
             >
               {loading ? (
@@ -286,7 +346,12 @@ export default function LoginPage() {
                       d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                     ></path>
                   </svg>
-                  جاري تسجيل الدخول...
+                  {isRetrying ? "جاري إعادة المحاولة..." : "جاري تسجيل الدخول..."}
+                </>
+              ) : !isOnline ? (
+                <>
+                  <WifiOff className="h-5 w-5" />
+                  لا يوجد اتصال بالإنترنت
                 </>
               ) : (
                 <>
