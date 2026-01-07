@@ -39,14 +39,71 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
 
+  // 🔥 FIX: Migration function to upgrade old cart items
+  // Note: We mark items for backend migration - the checkout API will handle the actual lookup
+  const migrateCartItems = (oldItems: any[]): CartItem[] => {
+    const migratedItems: CartItem[] = [];
+    let needsMigration = false;
+
+    for (const item of oldItems) {
+      // Check if item needs migration (has variantId but no masterProductId)
+      if (item.variantId && !item.masterProductId) {
+        needsMigration = true;
+        console.log("🔄 Cart item needs migration:", {
+          productId: item.product?.id,
+          variantId: item.variantId,
+          productName: item.product?.name,
+        });
+
+        // Keep item as is - backend checkout will handle the lookup
+        // This ensures compatibility with old carts without breaking them
+        migratedItems.push({
+          ...item,
+          // masterProductId will be resolved by backend during checkout
+        });
+      } else {
+        // Item is already in correct format
+        migratedItems.push(item);
+      }
+    }
+
+    if (needsMigration) {
+      console.log("✅ Cart migration completed:", migratedItems.length, "items");
+      console.log("ℹ️ Items with missing masterProductId will be resolved during checkout");
+    }
+
+    return migratedItems;
+  };
+
   useEffect(() => {
     const savedCart = localStorage.getItem("cart");
     if (savedCart) {
       try {
         const parsedCart = JSON.parse(savedCart);
-        setItems(parsedCart);
+        
+        // Check if cart needs migration
+        const needsMigration = parsedCart.some(
+          (item: any) => item.variantId && !item.masterProductId
+        );
+
+        // Check if cart needs migration
+        const needsMigration = parsedCart.some(
+          (item: any) => item.variantId && !item.masterProductId
+        );
+
+        if (needsMigration) {
+          console.log("🔄 Cart needs migration, upgrading items...");
+          const migratedItems = migrateCartItems(parsedCart);
+          setItems(migratedItems);
+          // Save migrated cart
+          localStorage.setItem("cart", JSON.stringify(migratedItems));
+        } else {
+          setItems(parsedCart);
+        }
       } catch (error) {
         console.error("Error parsing cart from localStorage:", error);
+        // Clear corrupted cart
+        localStorage.removeItem("cart");
       }
     }
   }, []);

@@ -813,13 +813,33 @@ export async function POST(request: Request) {
       };
     });
 
+    console.log("📦 Inserting order items:", {
+      count: orderItems.length,
+      orderId: order.id,
+      userId: user.id,
+      items: orderItems.map(item => ({
+        productId: item.product_id,
+        variantId: item.variant_id,
+        quantity: item.qty,
+      })),
+    });
+
     const { data: createdItems, error: itemsError } = await supabase
       .from("order_items")
       .insert(orderItems)
       .select();
 
     if (itemsError) {
-      console.error("❌ Order items creation failed:", itemsError);
+      console.error("❌ Order items creation failed:", {
+        error: itemsError,
+        code: itemsError.code,
+        message: itemsError.message,
+        details: itemsError.details,
+        hint: itemsError.hint,
+        orderId: order.id,
+        userId: user.id,
+        itemsCount: orderItems.length,
+      });
 
       // ROLLBACK: Delete order and return stock
       await supabase.from("orders").delete().eq("id", order.id);

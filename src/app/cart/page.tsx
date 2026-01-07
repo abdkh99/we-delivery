@@ -513,42 +513,42 @@ export default function CartPage() {
             </div>
           </div>
 
-          {/* Summary Section */}
-          <div className="lg:col-span-1 space-y-4 sm:space-y-6">
+          {/* Summary Section - Mobile Optimized */}
+          <div className="lg:col-span-1 space-y-3 sm:space-4 md:space-y-6">
             {/* Order Summary Card */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 sticky top-4 sm:top-8">
-              <div className="px-4 sm:px-6 py-4 sm:py-5 border-b border-gray-200 bg-gradient-to-r from-green-50 to-emerald-50">
-                <h2 className="text-lg sm:text-xl font-bold text-gray-900 flex items-center gap-2">
-                  <CheckCircle className="h-5 w-5 sm:h-6 sm:w-6 text-green-600" />
+            <div className="bg-white rounded-lg sm:rounded-xl shadow-sm border border-gray-100 sticky top-2 sm:top-4 md:top-8 z-10">
+              <div className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 md:py-5 border-b border-gray-200 bg-gradient-to-r from-green-50 to-emerald-50">
+                <h2 className="text-base sm:text-lg md:text-xl font-bold text-gray-900 flex items-center gap-1.5 sm:gap-2">
+                  <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 text-green-600 flex-shrink-0" />
                   <span>ملخص الطلب</span>
                 </h2>
               </div>
 
-              <div className="p-4 sm:p-6 space-y-5">
+              <div className="p-3 sm:p-4 md:p-6 space-y-3 sm:space-y-4 md:space-y-5">
                 {user && (
-                  <div className="p-3 bg-blue-50 rounded-lg flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Coins className="h-5 w-5 text-blue-600" />
-                      <span className="text-sm font-medium text-gray-700">
+                  <div className="p-2.5 sm:p-3 bg-blue-50 rounded-lg flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+                      <Coins className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600 flex-shrink-0" />
+                      <span className="text-xs sm:text-sm font-medium text-gray-700 truncate">
                         النقاط المتاحة:
                       </span>
                     </div>
-                    <span className="text-base sm:text-lg font-bold text-blue-600">
+                    <span className="text-sm sm:text-base md:text-lg font-bold text-blue-600 whitespace-nowrap">
                       {loadingPoints ? "..." : userPoints.toLocaleString()}
                     </span>
                   </div>
                 )}
 
-                {/* Address Selection Section */}
-                <div className="space-y-3">
-                  <label className="block text-sm sm:text-base font-bold text-gray-900 mb-3 text-right">
-                    <span className="flex items-center gap-2">
-                      <MapPin className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
+                {/* Address Selection Section - Mobile Optimized */}
+                <div className="space-y-2 sm:space-y-3">
+                  <label className="block text-xs sm:text-sm md:text-base font-bold text-gray-900 mb-2 sm:mb-3 text-right px-1">
+                    <span className="flex items-center gap-1.5 sm:gap-2">
+                      <MapPin className="h-3.5 w-3.5 sm:h-4 sm:w-4 md:h-5 md:w-5 text-blue-600 flex-shrink-0" />
                       <span>عنوان التوصيل</span>
                       <span className="text-red-500">*</span>
                     </span>
                   </label>
-                  <div className="bg-gray-50 rounded-xl p-4 border-2 border-dashed border-gray-200">
+                  <div className="bg-gray-50 rounded-lg sm:rounded-xl p-2 sm:p-3 md:p-4 border-2 border-dashed border-gray-200">
                     <AddressStepDynamic
                       onAddressSelected={setSelectedAddress}
                       selectedAddressId={selectedAddress?.id}
@@ -556,22 +556,22 @@ export default function CartPage() {
                     />
                   </div>
                   {selectedAddress && (
-                    <div className="mt-3 p-4 bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-300 rounded-xl shadow-sm">
-                      <p className="text-sm sm:text-base text-green-800 flex items-center gap-2 text-right mb-2 font-bold">
-                        <CheckCircle className="h-5 w-5 flex-shrink-0" />
+                    <div className="mt-2 sm:mt-3 p-3 sm:p-4 bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-300 rounded-lg sm:rounded-xl shadow-sm">
+                      <p className="text-xs sm:text-sm md:text-base text-green-800 flex items-center gap-1.5 sm:gap-2 text-right mb-1.5 sm:mb-2 font-bold">
+                        <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
                         <span>✓ العنوان المحدد</span>
                       </p>
                       <div className="text-right space-y-1">
-                        <p className="text-sm font-semibold text-green-900">
+                        <p className="text-xs sm:text-sm font-semibold text-green-900 line-clamp-1">
                           {selectedAddress.street}
                         </p>
                         {selectedAddress.neighborhood && (
-                          <p className="text-xs text-green-700">
+                          <p className="text-[10px] sm:text-xs text-green-700 line-clamp-1">
                             {selectedAddress.neighborhood}
                           </p>
                         )}
                         {selectedAddress.address_details && (
-                          <p className="text-xs text-green-600 mt-2 pt-2 border-t border-green-200">
+                          <p className="text-[10px] sm:text-xs text-green-600 mt-1.5 sm:mt-2 pt-1.5 sm:pt-2 border-t border-green-200 line-clamp-2">
                             {selectedAddress.address_details}
                           </p>
                         )}
@@ -580,29 +580,29 @@ export default function CartPage() {
                   )}
                 </div>
 
-                <div className="space-y-3 pt-4 border-t border-gray-200">
+                <div className="space-y-2 sm:space-y-3 pt-3 sm:pt-4 border-t border-gray-200">
                   {pointsNeeded > 0 && (
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-700 flex items-center gap-1">
-                        <Coins className="h-4 w-4 text-blue-600" />
-                        الدفع بالنقاط:
+                    <div className="flex justify-between items-center text-xs sm:text-sm gap-2">
+                      <span className="text-gray-700 flex items-center gap-1 min-w-0">
+                        <Coins className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-blue-600 flex-shrink-0" />
+                        <span className="truncate">الدفع بالنقاط:</span>
                       </span>
-                      <span className="font-semibold text-blue-600">
+                      <span className="font-semibold text-blue-600 whitespace-nowrap">
                         {pointsNeeded} نقطة
                       </span>
                     </div>
                   )}
 
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-700">الدفع النقدي:</span>
-                    <span className="text-gray-700">
+                  <div className="flex justify-between items-center text-xs sm:text-sm gap-2">
+                    <span className="text-gray-700 truncate">الدفع النقدي:</span>
+                    <span className="text-gray-700 whitespace-nowrap">
                       {formatCurrency(getCashNeeded())}
                     </span>
                   </div>
 
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-700">رسوم التوصيل:</span>
-                    <span className="text-gray-700">
+                  <div className="flex justify-between items-center text-xs sm:text-sm gap-2">
+                    <span className="text-gray-700 truncate">رسوم التوصيل:</span>
+                    <span className="text-gray-700 whitespace-nowrap">
                       {deliveryFee === 0
                         ? "مجاني 🎉"
                         : formatCurrency(deliveryFee)}
@@ -610,35 +610,35 @@ export default function CartPage() {
                   </div>
 
                   {platformCommission > 0 && (
-                    <div className="bg-gradient-to-r from-yellow-50 to-orange-50 border-2 border-yellow-300 px-4 py-3 rounded-lg mt-2">
-                      <div className="flex justify-between items-center">
-                        <div className="flex flex-col">
-                          <span className="text-sm font-semibold text-yellow-900">
+                    <div className="bg-gradient-to-r from-yellow-50 to-orange-50 border-2 border-yellow-300 px-3 sm:px-4 py-2 sm:py-3 rounded-lg mt-1 sm:mt-2">
+                      <div className="flex justify-between items-center gap-2">
+                        <div className="flex flex-col min-w-0">
+                          <span className="text-xs sm:text-sm font-semibold text-yellow-900 truncate">
                             💰 رسوم المنصة
                           </span>
-                          <span className="text-xs text-yellow-700">
+                          <span className="text-[10px] sm:text-xs text-yellow-700">
                             (تمويل تطوير الخدمة)
                           </span>
                         </div>
-                        <span className="text-lg font-bold text-yellow-900">
+                        <span className="text-sm sm:text-base md:text-lg font-bold text-yellow-900 whitespace-nowrap">
                           {formatCurrency(platformCommission)}
                         </span>
                       </div>
                     </div>
                   )}
 
-                  <div className="flex justify-between text-base sm:text-lg font-semibold pt-2 border-t border-gray-200">
-                    <span className="text-gray-900">إجمالي النقد:</span>
-                    <span className="text-blue-600">
+                  <div className="flex justify-between items-center text-sm sm:text-base md:text-lg font-semibold pt-2 sm:pt-3 border-t border-gray-200 gap-2">
+                    <span className="text-gray-900 truncate">إجمالي النقد:</span>
+                    <span className="text-blue-600 whitespace-nowrap">
                       {formatCurrency(cashNeeded)}
                     </span>
                   </div>
 
                   {pointsNeeded > userPoints && (
-                    <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
-                      <p className="text-sm text-red-700 flex items-center gap-2">
-                        <AlertCircle className="h-4 w-4 flex-shrink-0" />
-                        <span>
+                    <div className="mt-2 sm:mt-3 p-2.5 sm:p-3 bg-red-50 border border-red-200 rounded-lg">
+                      <p className="text-xs sm:text-sm text-red-700 flex items-center gap-1.5 sm:gap-2">
+                        <AlertCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4 flex-shrink-0" />
+                        <span className="leading-relaxed">
                           نقاط غير كافية! تحتاج {pointsNeeded - userPoints} نقطة
                           إضافية.
                         </span>
@@ -657,7 +657,7 @@ export default function CartPage() {
                     isProcessing ||
                     pointsNeeded > userPoints
                   }
-                  className="w-full bg-blue-600 text-white py-3 sm:py-4 px-4 rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:bg-gray-400 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2 text-sm sm:text-base"
+                  className="w-full bg-blue-600 text-white py-2.5 sm:py-3 md:py-4 px-3 sm:px-4 rounded-lg hover:bg-blue-700 active:bg-blue-800 transition-colors font-medium disabled:bg-gray-400 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2 text-xs sm:text-sm md:text-base shadow-lg disabled:shadow-none"
                 >
                   {isProcessing ? (
                     <>
