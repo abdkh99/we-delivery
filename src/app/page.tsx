@@ -54,15 +54,15 @@ export default function Home() {
               </div>
 
               <h1 className="text-4xl md:text-5xl lg:text-7xl font-extrabold text-slate-900 tracking-tight mb-6 leading-tight">
-                جميع منتجاتك <br />
+                طلبات يومية <br />
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">
-                  تصل لباب بيتك
+                  توصيل سريع
                 </span>
               </h1>
 
               <p className="text-lg md:text-xl text-slate-600 mb-8 leading-relaxed max-w-2xl mx-auto lg:mx-0">
-                سوبر ماركت فيورا يوفر لك تجربة تسوق فريدة. منتجات طازجة، جودة
-                عالية، وتوصيل سريع يضمن لك الراحة والرضا التام.
+                نوفر لك تجربة تسوق فريدة، جودة عالية،
+                وتوصيل سريع يضمن لك الراحة والرضا التام.
               </p>
 
               <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
@@ -148,8 +148,8 @@ export default function Home() {
             />
             <FeatureCard
               icon={<Package className="h-8 w-8 text-indigo-600" />}
-              title="منتجات طازجة"
-              description="نضمن لك منتجات يومية طازجة مختارة بعناية من أفضل الموردين المحليين."
+              title="منتجات متنوعة"
+              description="نضمن لك منتجات يومية متنوعة مختارة بعناية من أفضل الموردين المحليين."
             />
             <FeatureCard
               icon={<Star className="h-8 w-8 text-amber-500" />}
@@ -279,7 +279,7 @@ export default function Home() {
               </Link>
             </div>
             <p className="text-slate-500 text-sm">
-              © {new Date().getFullYear()} We Deliver. جميع الحقوق محفوظة.
+              © {new Date().getFullYear()} We Delivery. جميع الحقوق محفوظة.
             </p>
           </div>
         </div>

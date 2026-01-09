@@ -115,15 +115,15 @@ export default function AddressForm({
     <form onSubmit={handleSubmit} className={`space-y-6 ${className}`}>
       {/* General Error */}
       {errors.general && (
-        <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
-          <p className="text-sm text-red-700 text-right">{errors.general}</p>
+        <div className="p-4 bg-red-50 border-2 border-red-300 rounded-lg shadow-md">
+          <p className="text-sm text-red-800 text-right font-bold">{errors.general}</p>
         </div>
       )}
 
       {/* Address Label */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-3 text-right">
-          نوع العنوان <span className="text-red-500">*</span>
+        <label className="block text-sm font-bold text-gray-800 mb-3 text-right">
+          نوع العنوان <span className="text-red-500 text-base">*</span>
         </label>
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
           {LABEL_OPTIONS.map((option) => {
@@ -135,14 +135,13 @@ export default function AddressForm({
                 onClick={() =>
                   setFormData((prev) => ({ ...prev, label: option.value }))
                 }
-                className={`flex flex-col items-center gap-2 p-4 rounded-lg border-2 transition-all ${
-                  formData.label === option.value
-                    ? "border-blue-600 bg-blue-50 text-blue-700"
-                    : "border-gray-300 text-gray-600 hover:border-gray-400"
-                }`}
+                className={`flex flex-col items-center gap-2 p-4 rounded-lg border-2 transition-all font-semibold shadow-sm hover:shadow-md ${formData.label === option.value
+                    ? "border-blue-500 bg-blue-500 text-white"
+                    : "border-gray-300 bg-white text-gray-700 hover:border-blue-300 hover:bg-blue-50"
+                  }`}
               >
                 <Icon className="h-5 w-5" />
-                <span className="text-sm font-medium">{option.label}</span>
+                <span className="text-sm">{option.label}</span>
               </button>
             );
           })}
@@ -151,24 +150,24 @@ export default function AddressForm({
 
       {/* City (Read-only) */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2 text-right">
+        <label className="block text-sm font-bold text-gray-800 mb-2 text-right">
           المدينة
         </label>
         <input
           type="text"
           value={formData.city}
           readOnly
-          className="w-full px-4 py-3 bg-gray-100 border border-gray-300 rounded-lg text-gray-600 cursor-not-allowed text-right"
+          className="w-full px-4 py-3 bg-gray-100 border-2 border-gray-300 rounded-lg text-gray-700 font-semibold cursor-not-allowed text-right"
         />
-        <p className="mt-1 text-xs text-gray-500 text-right">
-          المدينة ثابتة: دمشق
+        <p className="mt-2 text-xs text-gray-600 text-right font-medium bg-gray-50 p-2 rounded border border-gray-200">
+          ℹ️ المدينة ثابتة: دمشق
         </p>
       </div>
 
       {/* Street */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2 text-right">
-          اسم الشارع <span className="text-red-500">*</span>
+        <label className="block text-sm font-bold text-gray-800 mb-2 text-right">
+          اسم الشارع <span className="text-red-500 text-base">*</span>
         </label>
         <input
           type="text"
@@ -176,22 +175,25 @@ export default function AddressForm({
           onChange={(e) =>
             setFormData((prev) => ({ ...prev, street: e.target.value }))
           }
-          className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-right ${
-            errors.street ? "border-red-500" : "border-gray-300"
-          }`}
-          placeholder="مثال: شارع الأكلاسة"
+          className={`w-full text-gray-800 font-semibold px-4 py-3 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 text-right shadow-sm transition-all ${errors.street
+              ? "border-red-400 bg-red-50"
+              : "border-gray-300 bg-white hover:border-blue-300"
+            }`}
+          placeholder="مثال: شارع الكلاسة"
         />
         {errors.street && (
-          <p className="mt-1 text-sm text-red-600 text-right">{errors.street}</p>
+          <p className="mt-2 text-sm text-red-700 text-right font-semibold bg-red-50 p-2 rounded border border-red-300">
+            ⚠️ {errors.street}
+          </p>
         )}
-        <p className="mt-1 text-xs text-gray-500 text-right">
-          تم ملؤه تلقائياً من GPS - يمكنك تعديله إذا لزم الأمر
+        <p className="mt-2 text-xs text-gray-600 text-right font-medium bg-blue-50 p-2 rounded border border-blue-200">
+          📍 تم ملؤه تلقائياً من GPS - يمكنك تعديله إذا لزم الأمر
         </p>
       </div>
 
       {/* Neighborhood */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2 text-right">
+        <label className="block text-sm font-bold text-gray-800 mb-2 text-right">
           المنطقة / الحي
         </label>
         <input
@@ -200,18 +202,18 @@ export default function AddressForm({
           onChange={(e) =>
             setFormData((prev) => ({ ...prev, neighborhood: e.target.value }))
           }
-          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-right"
+          className="w-full text-gray-800 font-semibold px-4 py-3 border-2 border-gray-300 bg-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 text-right shadow-sm hover:border-blue-300 transition-all"
           placeholder="مثال: المزة"
         />
-        <p className="mt-1 text-xs text-gray-500 text-right">
-          تم ملؤه تلقائياً من GPS - يمكنك تعديله إذا لزم الأمر
+        <p className="mt-2 text-xs text-gray-600 text-right font-medium bg-blue-50 p-2 rounded border border-blue-200">
+          📍 تم ملؤه تلقائياً من GPS - يمكنك تعديله إذا لزم الأمر
         </p>
       </div>
 
       {/* Address Details */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2 text-right">
-          تفاصيل العنوان <span className="text-red-500">*</span>
+        <label className="block text-sm text-gray-800 font-bold mb-2 text-right">
+          تفاصيل العنوان <span className="text-red-500 text-base">*</span>
         </label>
         <textarea
           value={formData.address_details}
@@ -221,30 +223,31 @@ export default function AddressForm({
               address_details: e.target.value,
             }))
           }
-          rows={3}
-          className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-right ${
-            errors.address_details ? "border-red-500" : "border-gray-300"
-          }`}
+          rows={4}
+          className={`w-full text-gray-800 font-semibold px-4 py-3 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 text-right shadow-sm transition-all resize-none ${errors.address_details
+              ? "border-red-400 bg-red-50"
+              : "border-gray-300 bg-white hover:border-blue-300"
+            }`}
           placeholder="مثال: المبنى 2، الطابق الأول، بجانب الصيدلية"
         />
         {errors.address_details && (
-          <p className="mt-1 text-sm text-red-600 text-right">
-            {errors.address_details}
+          <p className="mt-2 text-sm text-red-700 text-right font-semibold bg-red-50 p-2 rounded border border-red-300">
+            ⚠️ {errors.address_details}
           </p>
         )}
-        <p className="mt-1 text-xs text-gray-500 text-right">
-          تعليمات واضحة للسائق للوصول إلى موقعك
+        <p className="mt-2 text-xs text-gray-600 text-right font-medium bg-green-50 p-2 rounded border border-green-200">
+          💡 تعليمات واضحة للسائق للوصول إلى موقعك
         </p>
       </div>
 
       {/* Contact Phone */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2 text-right">
+        <label className="block text-sm font-bold text-gray-800 mb-2 text-right">
           رقم الاتصال (اختياري)
         </label>
         <div className="relative">
           <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-            <Phone className="h-5 w-5 text-gray-400" />
+            <Phone className="h-5 w-5 text-gray-500" />
           </div>
           <input
             type="tel"
@@ -255,17 +258,17 @@ export default function AddressForm({
                 contact_phone: e.target.value,
               }))
             }
-            className="w-full pl-4 pr-10 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-right"
+            className="w-full text-gray-800 font-semibold pl-4 pr-10 py-3 border-2 border-gray-300 bg-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 text-right shadow-sm hover:border-blue-300 transition-all"
             placeholder="+963 9XX XXX XXX"
           />
         </div>
-        <p className="mt-1 text-xs text-gray-500 text-right">
-          رقم هاتف بديل للتواصل معك أثناء التوصيل
+        <p className="mt-2 text-xs text-gray-600 text-right font-medium bg-purple-50 p-2 rounded border border-purple-200">
+          📞 رقم هاتف بديل للتواصل معك أثناء التوصيل
         </p>
       </div>
 
       {/* Set as Default */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-lg border border-blue-200 shadow-sm">
         <input
           type="checkbox"
           id="is_default"
@@ -276,10 +279,10 @@ export default function AddressForm({
               is_default: e.target.checked,
             }))
           }
-          className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+          className="w-5 h-5 text-blue-600 border-2 border-gray-300 rounded focus:ring-2 focus:ring-blue-400 cursor-pointer"
         />
-        <label htmlFor="is_default" className="text-sm text-gray-700 text-right">
-          تعيين كعنوان افتراضي
+        <label htmlFor="is_default" className="text-sm text-gray-800 font-semibold text-right cursor-pointer flex-1">
+          ⭐ تعيين كعنوان افتراضي
         </label>
       </div>
 
@@ -289,7 +292,7 @@ export default function AddressForm({
           <button
             type="button"
             onClick={onCancel}
-            className="flex-1 px-4 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors font-medium"
+            className="flex-1 px-4 py-3 border-2 border-gray-300 bg-white rounded-lg text-gray-800 hover:bg-gray-50 hover:border-gray-400 transition-all font-bold shadow-sm hover:shadow-md"
           >
             إلغاء
           </button>
@@ -297,12 +300,11 @@ export default function AddressForm({
         <button
           type="submit"
           disabled={!initialData}
-          className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
+          className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-400 transition-all font-bold shadow-md hover:shadow-lg"
         >
-          حفظ العنوان
+          حفظ العنوان ✓
         </button>
       </div>
     </form>
   );
 }
-

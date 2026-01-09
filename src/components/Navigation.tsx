@@ -50,7 +50,7 @@ export default function Navigation() {
             href="/"
             className="flex items-center flex-shrink-0 gap-2 group"
           >
-            <img className=" max-md:-mr-4" width={"200px"} src="/logo.png"/>
+            <img className=" max-md:-mr-4" width={"200px"} src="/logo.png" />
           </Link>
 
           {/* Navigation Links (desktop) */}
@@ -115,7 +115,7 @@ export default function Navigation() {
                     className="flex items-center text-gray-700 space-x-2 hover:text-blue-600 transition-colors cursor-pointer"
                   >
                     <User className="h-5 w-5 text-gray-700" />
-                    <span className="text-sm pr-2 font-medium hover:text-blue-600 text-gray-700 max-w-[10rem] truncate">
+                    <span className="text-sm pl-2 font-medium hover:text-blue-600 text-gray-700 max-w-[10rem] truncate">
                       {profile?.name || "User"}
                     </span>
                     {profile?.points && profile.points > 0 && (
