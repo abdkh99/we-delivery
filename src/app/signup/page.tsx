@@ -5,7 +5,11 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { Package, Eye, EyeOff, Wifi, WifiOff } from "lucide-react";
-import { withRetry, isNetworkError, getNetworkErrorMessage } from "@/lib/network-utils";
+import {
+  withRetry,
+  isNetworkError,
+  getNetworkErrorMessage,
+} from "@/lib/network-utils";
 
 export default function SignupPage() {
   const [name, setName] = useState("");
@@ -128,7 +132,9 @@ export default function SignupPage() {
 
     // Check if offline
     if (!navigator.onLine) {
-      setError("لا يوجد اتصال بالإنترنت. يرجى التحقق من اتصالك والمحاولة مرة أخرى");
+      setError(
+        "لا يوجد اتصال بالإنترنت. يرجى التحقق من اتصالك والمحاولة مرة أخرى"
+      );
       setLoading(false);
       return;
     }
@@ -318,12 +324,11 @@ export default function SignupPage() {
 
       <div className="max-w-md w-full mx-auto">
         <div className="bg-white py-8 px-4 shadow-2xl rounded-2xl sm:px-10 border border-gray-100 relative">
-          
           <div className="mb-8 text-center">
             <div className="flex justify-center mb-4">
-               <div className="h-16 w-16 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-600 shadow-sm transform hover:rotate-6 transition-transform duration-300">
-                 <Package className="h-8 w-8" />
-               </div>
+              <div className="h-16 w-16 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-600 shadow-sm transform hover:rotate-6 transition-transform duration-300">
+                <Package className="h-8 w-8" />
+              </div>
             </div>
             <h2 className="text-3xl font-extrabold text-gray-900 tracking-tight">
               إنشاء حساب جديد
@@ -331,7 +336,7 @@ export default function SignupPage() {
             <p className="mt-2 text-sm text-gray-600">
               انضم إلينا واستمتع بتجربة تسوق فريدة
             </p>
-            
+
             {/* Network Status Indicator */}
             {!isOnline && (
               <div className="mt-4 inline-flex items-center gap-2 px-3 py-1.5 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
@@ -351,7 +356,10 @@ export default function SignupPage() {
             <div className="space-y-5">
               {/* Name Input */}
               <div>
-                <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
+                <label
+                  htmlFor="name"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
                   الاسم الكامل
                 </label>
                 <div className="mt-1 relative rounded-md shadow-sm">
@@ -370,7 +378,10 @@ export default function SignupPage() {
 
               {/* Username Input */}
               <div>
-                <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-1">
+                <label
+                  htmlFor="username"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
                   اسم المستخدم
                 </label>
                 <div className="mt-1 relative rounded-md shadow-sm">
@@ -393,10 +404,16 @@ export default function SignupPage() {
 
               {/* Phone Input */}
               <div>
-                <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">
+                <label
+                  htmlFor="phone"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
                   رقم الهاتف
                 </label>
-                <div className="mt-1 relative rounded-xl shadow-sm flex" dir="ltr">
+                <div
+                  className="mt-1 relative rounded-xl shadow-sm flex"
+                  dir="ltr"
+                >
                   <span className="inline-flex items-center px-4 py-3 rounded-l-xl border border-r-0 border-gray-300 bg-gray-50 text-gray-500 sm:text-sm font-semibold">
                     +963
                   </span>
@@ -418,7 +435,10 @@ export default function SignupPage() {
 
               {/* Password Input */}
               <div>
-                <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+                <label
+                  htmlFor="password"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
                   كلمة المرور
                 </label>
                 <div className="mt-1 relative rounded-md shadow-sm">
@@ -432,7 +452,9 @@ export default function SignupPage() {
                     value={password}
                     onChange={(e) => {
                       setPassword(e.target.value);
-                      setPasswordStrength(checkPasswordStrength(e.target.value));
+                      setPasswordStrength(
+                        checkPasswordStrength(e.target.value)
+                      );
                     }}
                   />
                   <button
@@ -451,12 +473,21 @@ export default function SignupPage() {
                 {password && (
                   <div className="mt-2 flex items-center gap-2">
                     <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                      <div 
-                        className={`h-full transition-all duration-300 ${passwordStrength.bg}`} 
-                        style={{ width: passwordStrength.text === "ضعيفة" ? "33%" : passwordStrength.text === "متوسطة" ? "66%" : "100%" }}
+                      <div
+                        className={`h-full transition-all duration-300 ${passwordStrength.bg}`}
+                        style={{
+                          width:
+                            passwordStrength.text === "ضعيفة"
+                              ? "33%"
+                              : passwordStrength.text === "متوسطة"
+                              ? "66%"
+                              : "100%",
+                        }}
                       ></div>
                     </div>
-                    <span className={`text-xs font-medium ${passwordStrength.color}`}>
+                    <span
+                      className={`text-xs font-medium ${passwordStrength.color}`}
+                    >
                       {passwordStrength.text}
                     </span>
                   </div>
@@ -465,7 +496,10 @@ export default function SignupPage() {
 
               {/* Confirm Password Input */}
               <div>
-                <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">
+                <label
+                  htmlFor="confirmPassword"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
                   تأكيد كلمة المرور
                 </label>
                 <div className="mt-1 relative rounded-md shadow-sm">
@@ -499,12 +533,22 @@ export default function SignupPage() {
               <div className="rounded-xl bg-red-50 p-4 border border-red-100 animate-in fade-in slide-in-from-top-2">
                 <div className="flex">
                   <div className="flex-shrink-0">
-                    <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                    <svg
+                      className="h-5 w-5 text-red-400"
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                        clipRule="evenodd"
+                      />
                     </svg>
                   </div>
                   <div className="mr-3">
-                    <h3 className="text-sm font-medium text-red-800">{error}</h3>
+                    <h3 className="text-sm font-medium text-red-800">
+                      {error}
+                    </h3>
                   </div>
                 </div>
               </div>
@@ -515,12 +559,22 @@ export default function SignupPage() {
               <div className="rounded-xl bg-green-50 p-4 border border-green-100 animate-in fade-in slide-in-from-top-2">
                 <div className="flex">
                   <div className="flex-shrink-0">
-                    <svg className="h-5 w-5 text-green-400" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                    <svg
+                      className="h-5 w-5 text-green-400"
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                        clipRule="evenodd"
+                      />
                     </svg>
                   </div>
                   <div className="mr-3">
-                    <h3 className="text-sm font-medium text-green-800">{success}</h3>
+                    <h3 className="text-sm font-medium text-green-800">
+                      {success}
+                    </h3>
                   </div>
                 </div>
               </div>
@@ -535,11 +589,29 @@ export default function SignupPage() {
               >
                 {loading ? (
                   <>
-                    <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    <svg
+                      className="animate-spin h-5 w-5 text-white"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      ></circle>
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      ></path>
                     </svg>
-                    {isRetrying ? "جاري إعادة المحاولة..." : "جاري إنشاء الحساب..."}
+                    {isRetrying
+                      ? "جاري إعادة المحاولة..."
+                      : "جاري إنشاء الحساب..."}
                   </>
                 ) : !isOnline ? (
                   <>
@@ -560,7 +632,9 @@ export default function SignupPage() {
                 <div className="w-full border-t border-gray-200"></div>
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-white text-gray-500">أو سجل الدخول عبر</span>
+                <span className="px-2 bg-white text-gray-500">
+                  أو سجل الدخول عبر
+                </span>
               </div>
             </div>
 

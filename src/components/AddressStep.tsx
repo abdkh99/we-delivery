@@ -303,7 +303,7 @@ export default function AddressStep({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
               {savedAddresses.map((address) => {
                 const isSelected = internalSelectedAddressId === address.id || selectedAddressId === address.id;
-                
+
                 const labelColors = {
                   home: {
                     default: "bg-blue-100 border-blue-300 text-blue-700 hover:bg-blue-50 hover:border-blue-500",
@@ -347,11 +347,10 @@ export default function AddressStep({
                             </span>
                             <div className="flex items-center gap-1 mt-0.5 sm:mt-1 flex-wrap justify-end">
                               {address.is_default && (
-                                <span className={`text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 rounded-full font-medium whitespace-nowrap ${
-                                  isSelected 
-                                    ? 'bg-white/30 text-white' 
+                                <span className={`text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 rounded-full font-medium whitespace-nowrap ${isSelected
+                                    ? 'bg-white/30 text-white'
                                     : 'bg-white/80 text-blue-700'
-                                }`}>
+                                  }`}>
                                   ⭐ افتراضي
                                 </span>
                               )}
@@ -365,44 +364,36 @@ export default function AddressStep({
                         </div>
 
                         {/* Address Details - Mobile Optimized */}
-                        <div className={`space-y-1.5 sm:space-y-2 rounded-lg p-2 sm:p-3 mt-2 sm:mt-3 ${
-                          isSelected ? 'bg-white/20' : 'bg-white/60'
-                        }`}>
+                        <div className={`space-y-1.5 sm:space-y-2 rounded-lg p-2 sm:p-3 mt-2 sm:mt-3 ${isSelected ? 'bg-white/20' : 'bg-white/60'
+                          }`}>
                           <div className="flex items-start gap-1.5 sm:gap-2">
-                            <MapPin className={`h-3.5 w-3.5 sm:h-4 sm:w-4 mt-0.5 flex-shrink-0 ${
-                              isSelected ? 'text-white' : 'text-gray-600'
-                            }`} />
+                            <MapPin className={`h-3.5 w-3.5 sm:h-4 sm:w-4 mt-0.5 flex-shrink-0 ${isSelected ? 'text-white' : 'text-gray-600'
+                              }`} />
                             <div className="flex-1 text-right min-w-0">
-                              <p className={`text-xs sm:text-sm md:text-base font-semibold mb-0.5 sm:mb-1 line-clamp-1 ${
-                                isSelected ? 'text-white' : 'text-gray-900'
-                              }`}>
+                              <p className={`text-xs sm:text-sm md:text-base font-semibold mb-0.5 sm:mb-1 line-clamp-1 ${isSelected ? 'text-white' : 'text-gray-900'
+                                }`}>
                                 {address.street}
                               </p>
                               {address.neighborhood && (
-                                <p className={`text-[10px] sm:text-xs md:text-sm mb-0.5 sm:mb-1 line-clamp-1 ${
-                                  isSelected ? 'text-white/90' : 'text-gray-600'
-                                }`}>
+                                <p className={`text-[10px] sm:text-xs md:text-sm mb-0.5 sm:mb-1 line-clamp-1 ${isSelected ? 'text-white/90' : 'text-gray-600'
+                                  }`}>
                                   {address.neighborhood}
                                 </p>
                               )}
-                              <p className={`text-[10px] sm:text-xs line-clamp-2 ${
-                                isSelected ? 'text-white/80' : 'text-gray-500'
-                              }`}>
+                              <p className={`text-[10px] sm:text-xs line-clamp-2 ${isSelected ? 'text-white/80' : 'text-gray-500'
+                                }`}>
                                 {address.address_details}
                               </p>
                             </div>
                           </div>
 
                           {address.contact_phone && (
-                            <div className={`flex items-center justify-end gap-1.5 sm:gap-2 pt-1.5 sm:pt-2 border-t ${
-                              isSelected ? 'border-white/30' : 'border-gray-200'
-                            }`}>
-                              <Phone className={`h-3 w-3 sm:h-3.5 sm:w-3.5 flex-shrink-0 ${
-                                isSelected ? 'text-white' : 'text-gray-600'
-                              }`} />
-                              <span className={`text-[10px] sm:text-xs md:text-sm font-medium truncate ${
-                                isSelected ? 'text-white' : 'text-gray-700'
+                            <div className={`flex items-center justify-end gap-1.5 sm:gap-2 pt-1.5 sm:pt-2 border-t ${isSelected ? 'border-white/30' : 'border-gray-200'
                               }`}>
+                              <Phone className={`h-3 w-3 sm:h-3.5 sm:w-3.5 flex-shrink-0 ${isSelected ? 'text-white' : 'text-gray-600'
+                                }`} />
+                              <span className={`text-[10px] sm:text-xs md:text-sm font-medium truncate ${isSelected ? 'text-white' : 'text-gray-700'
+                                }`}>
                                 {address.contact_phone}
                               </span>
                             </div>
@@ -413,11 +404,10 @@ export default function AddressStep({
                       {/* Delete Button - Mobile Optimized */}
                       <button
                         onClick={(e) => handleDeleteAddress(address.id, e)}
-                        className={`p-1.5 sm:p-2 rounded-lg transition-colors flex-shrink-0 ${
-                          isSelected 
-                            ? 'text-white hover:bg-white/20 active:bg-white/30' 
+                        className={`p-1.5 sm:p-2 rounded-lg transition-colors flex-shrink-0 ${isSelected
+                            ? 'text-white hover:bg-white/20 active:bg-white/30'
                             : 'text-red-600 hover:bg-red-100 active:bg-red-200'
-                        }`}
+                          }`}
                         title="حذف العنوان"
                         aria-label="حذف العنوان"
                       >
@@ -445,12 +435,6 @@ export default function AddressStep({
           <span>إضافة عنوان جديد</span>
         </button>
 
-        {/* Important Notice - Mobile Optimized */}
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-2.5 sm:p-3">
-          <p className="text-[10px] sm:text-xs text-yellow-800 text-right leading-relaxed">
-            ⚠️ <strong>ملاحظة مهمة:</strong> يجب تحديد الموقع عبر GPS لإضافة عنوان جديد
-          </p>
-        </div>
       </div>
     );
   }

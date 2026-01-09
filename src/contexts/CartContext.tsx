@@ -1,5 +1,4 @@
 "use client";
-
 import {
   createContext,
   useContext,
@@ -8,11 +7,10 @@ import {
   ReactNode,
 } from "react";
 import { Database } from "@/types/database";
-
+import { createClient } from "@/lib/supabase/client";
 import { CART_LIMITS, CART_ERROR_MESSAGES } from "@/lib/cart-limits";
-
 type Product = Database["public"]["Tables"]["products"]["Row"];
-
+type DeliveryFeeTier = Database["public"]["Tables"]["delivery_fee_tiers"]["Row"];
 interface CartItem {
   product: Product;
   quantity: number;
@@ -20,7 +18,6 @@ interface CartItem {
   variantId?: string;
   masterProductId?: string; // ✅ Add this to store original product ID
 }
-
 interface CartContextType {
   items: CartItem[];
   addItem: (product: Product, quantity: number, variantId?: string, masterProductId?: string) => { success: boolean; error?: string };
@@ -32,19 +29,18 @@ interface CartContextType {
   getTotalPrice: () => number;
   getPointsNeeded: () => number;
   getCashNeeded: () => number;
+  getDeliveryFee: () => number;
 }
-
 const CartContext = createContext<CartContextType | undefined>(undefined);
-
 export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
-
+  const [tiers, setTiers] = useState<DeliveryFeeTier[]>([]);
+  const supabase = createClient();
   // 🔥 FIX: Migration function to upgrade old cart items
   // Note: We mark items for backend migration - the checkout API will handle the actual lookup
   const migrateCartItems = (oldItems: any[]): CartItem[] => {
     const migratedItems: CartItem[] = [];
     let needsMigration = false;
-
     for (const item of oldItems) {
       // Check if item needs migration (has variantId but no masterProductId)
       if (item.variantId && !item.masterProductId) {
@@ -54,7 +50,6 @@ export function CartProvider({ children }: { children: ReactNode }) {
           variantId: item.variantId,
           productName: item.product?.name,
         });
-
         // Keep item as is - backend checkout will handle the lookup
         // This ensures compatibility with old carts without breaking them
         migratedItems.push({
@@ -66,26 +61,22 @@ export function CartProvider({ children }: { children: ReactNode }) {
         migratedItems.push(item);
       }
     }
-
     if (needsMigration) {
       console.log("✅ Cart migration completed:", migratedItems.length, "items");
       console.log("ℹ️ Items with missing masterProductId will be resolved during checkout");
     }
-
     return migratedItems;
   };
-
   useEffect(() => {
     const savedCart = localStorage.getItem("cart");
     if (savedCart) {
       try {
         const parsedCart = JSON.parse(savedCart);
-        
+
         // Check if cart needs migration
         const needsMigration = parsedCart.some(
           (item: any) => item.variantId && !item.masterProductId
         );
-
         if (needsMigration) {
           console.log("🔄 Cart needs migration, upgrading items...");
           const migratedItems = migrateCartItems(parsedCart);
@@ -101,32 +92,38 @@ export function CartProvider({ children }: { children: ReactNode }) {
         localStorage.removeItem("cart");
       }
     }
-  }, []);
+    const fetchTiers = async () => {
+      const { data } = await supabase
+        .from("delivery_fee_tiers")
+        .select("*")
+        .eq("is_active", true)
+        .order("min_order_amount", { ascending: true });
 
+      if (data) setTiers(data);
+    };
+    fetchTiers();
+  }, []);
   useEffect(() => {
     localStorage.setItem("cart", JSON.stringify(items));
   }, [items]);
-
   const addItem = (product: Product, quantity: number, variantId?: string, masterProductId?: string) => {
     // Check total items limit
     const currentTotalItems = items.reduce((total, item) => total + item.quantity, 0);
     if (currentTotalItems + quantity > CART_LIMITS.MAX_TOTAL_ITEMS) {
       return { success: false, error: CART_ERROR_MESSAGES.MAX_ITEMS_EXCEEDED };
     }
-
     setItems((prevItems) => {
       const existingItem = prevItems.find(
-        (item) => variantId 
+        (item) => variantId
           ? item.variantId === variantId
           : item.product.id === product.id && !item.variantId
       );
-
       if (existingItem) {
         return prevItems.map((item) => {
-          const isMatch = variantId 
+          const isMatch = variantId
             ? item.variantId === variantId
             : item.product.id === product.id && !item.variantId;
-          
+
           if (isMatch) {
             const maxQuantity = Math.min(
               item.quantity + quantity,
@@ -141,19 +138,17 @@ export function CartProvider({ children }: { children: ReactNode }) {
           return item;
         });
       } else {
-        return [...prevItems, { 
-          product, 
-          quantity: Math.min(quantity, CART_LIMITS.MAX_QUANTITY_PER_PRODUCT), 
-          paymentMethod: 'cash', 
-          variantId, 
-          masterProductId 
+        return [...prevItems, {
+          product,
+          quantity: Math.min(quantity, CART_LIMITS.MAX_QUANTITY_PER_PRODUCT),
+          paymentMethod: 'cash',
+          variantId,
+          masterProductId
         }];
       }
     });
-
     return { success: true };
   };
-
   const removeItem = (productId: string, variantId?: string) => {
     setItems((prevItems) =>
       prevItems.filter((item) => {
@@ -164,22 +159,20 @@ export function CartProvider({ children }: { children: ReactNode }) {
       })
     );
   };
-
   const updateQuantity = (productId: string, quantity: number, variantId?: string) => {
     if (quantity <= 0) {
       removeItem(productId, variantId);
       return;
     }
-
     setItems((prevItems) =>
       prevItems.map((item) => {
-        const isMatch = variantId 
+        const isMatch = variantId
           ? item.variantId === variantId
           : item.product.id === productId && !item.variantId;
-        
+
         if (isMatch) {
           const maxQuantity = Math.min(
-            quantity, 
+            quantity,
             item.product.stock_estimate,
             CART_LIMITS.MAX_QUANTITY_PER_PRODUCT
           );
@@ -189,14 +182,13 @@ export function CartProvider({ children }: { children: ReactNode }) {
       })
     );
   };
-
   const updateItemPaymentMethod = (productId: string, method: 'cash' | 'points', variantId?: string) => {
     setItems((prevItems) =>
       prevItems.map((item) => {
-        const isMatch = variantId 
+        const isMatch = variantId
           ? item.variantId === variantId
           : item.product.id === productId && !item.variantId;
-        
+
         return isMatch
           ? { ...item, paymentMethod: method }
           : item;
@@ -233,7 +225,22 @@ export function CartProvider({ children }: { children: ReactNode }) {
       .filter(item => item.paymentMethod === 'cash')
       .reduce((total, item) => total + item.product.price * item.quantity, 0);
   };
+  const getDeliveryFee = () => {
+    const total = getTotalPrice();
+    if (tiers.length === 0) {
+      // Fallback
+      return total >= 100000 ? 0 : 2000;
+    }
 
+    for (const tier of tiers) {
+      const min = Number(tier.min_order_amount) || 0;
+      const max = tier.max_order_amount === null ? Infinity : Number(tier.max_order_amount);
+      if (total >= min && total < max) {
+        return Number(tier.delivery_fee);
+      }
+    }
+    return 2000; // Default fallback
+  };
   return (
     <CartContext.Provider
       value={{
@@ -247,13 +254,13 @@ export function CartProvider({ children }: { children: ReactNode }) {
         getTotalPrice,
         getPointsNeeded,
         getCashNeeded,
+        getDeliveryFee,
       }}
     >
       {children}
     </CartContext.Provider>
   );
 }
-
 export function useCart() {
   const context = useContext(CartContext);
   if (context === undefined) {

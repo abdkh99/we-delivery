@@ -102,7 +102,6 @@ export default function CommissionSettings() {
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-2xl font-bold text-gray-900">إعدادات عمولة المنصة</h2>
-          <p className="text-sm text-gray-600 mt-1">إدارة نظام العمولة حسب قيمة الطلب - كل ما زاد الطلب زادت العمولة</p>
         </div>
         {!isAdding && !editingId && (
           <button onClick={() => setIsAdding(true)} className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2">

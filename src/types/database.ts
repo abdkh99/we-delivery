@@ -156,11 +156,11 @@ export interface Database {
           delivery_fee: number;
           platform_commission: number;
           status:
-            | "pending"
-            | "confirmed"
-            | "on_delivery"
-            | "delivered"
-            | "cancelled";
+          | "pending"
+          | "confirmed"
+          | "on_delivery"
+          | "delivered"
+          | "cancelled";
           address_text: string;
           lat: number;
           lng: number;
@@ -178,11 +178,11 @@ export interface Database {
           delivery_fee: number;
           platform_commission?: number;
           status?:
-            | "pending"
-            | "confirmed"
-            | "on_delivery"
-            | "delivered"
-            | "cancelled";
+          | "pending"
+          | "confirmed"
+          | "on_delivery"
+          | "delivered"
+          | "cancelled";
           address_text: string;
           lat: number;
           lng: number;
@@ -200,11 +200,11 @@ export interface Database {
           delivery_fee?: number;
           platform_commission?: number;
           status?:
-            | "pending"
-            | "confirmed"
-            | "on_delivery"
-            | "delivered"
-            | "cancelled";
+          | "pending"
+          | "confirmed"
+          | "on_delivery"
+          | "delivered"
+          | "cancelled";
           address_text?: string;
           lat?: number;
           lng?: number;
@@ -369,34 +369,63 @@ export interface Database {
           id: string;
           base_currency: string;
           target_currency: string;
-          currency_pair: string; // ← جديد
+          currency_pair: string;
           rate: number;
           provider: string | null;
           fetched_at: string;
-          is_manual: boolean; // ← جديد
-          updated_by: string | null; // ← جديد
+          is_manual: boolean;
+          updated_by: string | null;
         };
         Insert: {
           id?: string;
           base_currency: string;
           target_currency: string;
-          currency_pair?: string; // NEW
+          currency_pair?: string;
           rate: number;
           provider?: string | null;
           fetched_at?: string;
-          is_manual?: boolean; // NEW
-          updated_by?: string | null; // NEW
+          is_manual?: boolean;
+          updated_by?: string | null;
         };
         Update: {
           id?: string;
           base_currency?: string;
           target_currency?: string;
-          currency_pair?: string; // NEW
+          currency_pair?: string;
           rate?: number;
           provider?: string | null;
           fetched_at?: string;
-          is_manual?: boolean; // NEW
-          updated_by?: string | null; // NEW
+          is_manual?: boolean;
+          updated_by?: string | null;
+        };
+      };
+      delivery_fee_tiers: {
+        Row: {
+          id: string;
+          min_order_amount: number;
+          max_order_amount: number | null;
+          delivery_fee: number;
+          is_active: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          min_order_amount: number;
+          max_order_amount?: number | null;
+          delivery_fee: number;
+          is_active?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          min_order_amount?: number;
+          max_order_amount?: number | null;
+          delivery_fee?: number;
+          is_active?: boolean;
+          created_at?: string;
+          updated_at?: string;
         };
       };
     };

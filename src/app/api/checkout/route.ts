@@ -8,16 +8,40 @@ import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 
 // Utility functions (inline to avoid import issues)
-function calculateDeliveryFee(distance: number, totalPrice: number): number {
-  const FREE_DELIVERY_THRESHOLD = 100000;
-  const BASE_FEE = 2000;
-
-  if (totalPrice >= FREE_DELIVERY_THRESHOLD) {
-    return 0;
+async function calculateDynamicDeliveryFee(supabase: any, totalPrice: number): Promise<number> {
+  const DEFAULT_FEE = 2000;
+  try {
+    const { data: tiers, error } = await supabase
+      .from("delivery_fee_tiers")
+      .select("*")
+      .eq("is_active", true)
+      .order("min_order_amount", { ascending: true });
+    if (error) {
+      console.error("Error fetching delivery tiers:", error);
+      // Fallback to existing logic if DB fails
+      if (totalPrice >= 100000) return 0;
+      return DEFAULT_FEE;
+    }
+    if (!tiers || tiers.length === 0) {
+      // Fallback: Free over 100k, else 2000
+      if (totalPrice >= 100000) return 0;
+      return DEFAULT_FEE;
+    }
+    // Find matching tier
+    for (const tier of tiers) {
+      const min = Number(tier.min_order_amount) || 0;
+      const max = tier.max_order_amount === null ? Infinity : Number(tier.max_order_amount);
+      if (totalPrice >= min && totalPrice < max) {
+        return Number(tier.delivery_fee);
+      }
+    }
+    // If no tier matched (shouldn't happen if tiers cover 0-Infinity), return default
+    return DEFAULT_FEE;
+  } catch (error) {
+    console.error("Error calculating delivery fee:", error);
+    return DEFAULT_FEE;
   }
-  return BASE_FEE;
 }
-
 function calculatePlatformCommission(totalPrice: number): number {
   const COMMISSION_THRESHOLD = 10000;
   const COMMISSION_RATE = 0.05; // 5%
@@ -86,7 +110,7 @@ export async function POST(request: Request) {
     console.log("\n🔍 Validating and normalizing cart items...");
     for (let i = 0; i < items.length; i++) {
       const item = items[i];
-      
+
       if (!item.product || !item.product.id) {
         console.error(`❌ Item ${i} missing product or product.id`);
         return NextResponse.json(
@@ -94,7 +118,7 @@ export async function POST(request: Request) {
           { status: 400 }
         );
       }
-      
+
       if (!item.quantity || item.quantity <= 0) {
         console.error(`❌ Item ${i} has invalid quantity: ${item.quantity}`);
         return NextResponse.json(
@@ -102,7 +126,7 @@ export async function POST(request: Request) {
           { status: 400 }
         );
       }
-      
+
       // Log item structure for debugging (especially on mobile)
       console.log(`Item ${i}:`, {
         productId: item.product.id,
@@ -112,7 +136,7 @@ export async function POST(request: Request) {
         quantity: item.quantity,
       });
     }
-    
+
     console.log("✅ All items validated");
 
     if (!deliveryAddress?.trim() || !deliveryLat || !deliveryLng) {
@@ -161,8 +185,11 @@ export async function POST(request: Request) {
     // ============================================
     // 4. VERIFY PRODUCTS & VARIANTS IN DATABASE
     // ============================================
-    console.log("\n🔍 Verifying products and variants...");
 
+
+
+
+    console.log("\n🔍 Verifying products and variants...");
     // 🔥 FIX: Collect all product IDs correctly
     // For variants: use masterProductId (the actual product ID)
     // For regular products: use product.id
@@ -177,7 +204,7 @@ export async function POST(request: Request) {
         // For non-variant items, use product.id directly
         productIds.add(item.product.id);
       }
-      
+
       if (item?.variantId) {
         variantIds.add(item.variantId);
       }
@@ -318,7 +345,7 @@ export async function POST(request: Request) {
       // 🔥 FIX: Enhanced product lookup logic
       let dbProduct: any = null;
       let actualVariantId: string | null = null;
-      
+
       // Strategy 1: Use masterProductId if available (most reliable)
       if (item?.masterProductId) {
         dbProduct = uniqueProducts.find((p: any) => p.id === item.masterProductId);
@@ -326,7 +353,7 @@ export async function POST(request: Request) {
           console.log(`✅ Found product via masterProductId: ${dbProduct.name}`);
         }
       }
-      
+
       // Strategy 2: If we have variantId but no product found yet, look up variant first
       if (!dbProduct && item.variantId) {
         const variant = variantMap.get(item.variantId);
@@ -338,7 +365,7 @@ export async function POST(request: Request) {
           }
         }
       }
-      
+
       // Strategy 3: Check if item.product.id is actually a variant ID (mobile/old cart issue)
       if (!dbProduct) {
         const possibleVariant = variantMap.get(item.product.id);
@@ -350,7 +377,7 @@ export async function POST(request: Request) {
           }
         }
       }
-      
+
       // Strategy 4: Try direct product lookup (for non-variant items)
       if (!dbProduct) {
         dbProduct = uniqueProducts.find((p: any) => p.id === item.product.id);
@@ -358,7 +385,7 @@ export async function POST(request: Request) {
           console.log(`✅ Found product via direct lookup: ${dbProduct.name}`);
         }
       }
-      
+
       // Strategy 5: If we still have variantId but no product, query database directly
       if (!dbProduct && item.variantId) {
         console.log(`⚠️ Product not found in cache, querying database for variant: ${item.variantId}`);
@@ -367,7 +394,7 @@ export async function POST(request: Request) {
           .select("master_product_id, variant_name")
           .eq("id", item.variantId)
           .single();
-        
+
         if (!variantError && variantData?.master_product_id) {
           dbProduct = uniqueProducts.find((p: any) => p.id === variantData.master_product_id);
           actualVariantId = item.variantId;
@@ -414,10 +441,10 @@ export async function POST(request: Request) {
           { status: 400 }
         );
       }
-      
+
       // Use the actual variant ID if we found it
       const finalVariantId = actualVariantId || item.variantId;
-      
+
       // Store the resolved variant ID and product ID for this item
       itemVariantMap.set(itemIndex, {
         variantId: finalVariantId,
@@ -467,9 +494,8 @@ export async function POST(request: Request) {
           return NextResponse.json(
             {
               error: "كمية غير متوفرة",
-              message: `${dbProduct.name} - ${variant.variant_name}: المتوفر ${
-                variant.stock_estimate || 0
-              }`,
+              message: `${dbProduct.name} - ${variant.variant_name}: المتوفر ${variant.stock_estimate || 0
+                }`,
             },
             { status: 400 }
           );
@@ -486,7 +512,6 @@ export async function POST(request: Request) {
             { status: 400 }
           );
         }
-
         console.log(
           `✅ Variant stock OK: ${variant.variant_name} (${variant.stock_estimate} available)`
         );
@@ -499,20 +524,17 @@ export async function POST(request: Request) {
           );
           continue; // Skip to next item
         }
-
         if (item.quantity > (dbProduct.stock_estimate || 0)) {
           console.error("❌ Insufficient stock for:", dbProduct.name);
           return NextResponse.json(
             {
               error: "كمية غير متوفرة",
-              message: `${dbProduct.name} - المتوفر: ${
-                dbProduct.stock_estimate || 0
-              }`,
+              message: `${dbProduct.name} - المتوفر: ${dbProduct.stock_estimate || 0
+                }`,
             },
             { status: 400 }
           );
         }
-
         if ((dbProduct.stock_estimate || 0) === 0) {
           console.error(`❌ Product out of stock: ${dbProduct.name}`);
           return NextResponse.json(
@@ -523,28 +545,24 @@ export async function POST(request: Request) {
             { status: 400 }
           );
         }
-
         console.log(
           `✅ Product stock OK: ${dbProduct.name} (${dbProduct.stock_estimate} available)`
         );
       }
-      
+
       itemIndex++;
     }
-
     console.log("✅ All stock checks passed");
-
     // ============================================
     // 6. CALCULATE TOTALS
     // ============================================
     console.log("\n💰 Calculating totals...");
-
     const totalPrice = items.reduce(
       (sum, item) => sum + item.product.price * item.quantity,
       0
     );
 
-    const deliveryFee = calculateDeliveryFee(1, totalPrice);
+    const deliveryFee = await calculateDynamicDeliveryFee(supabase, totalPrice);
     const platformCommission = calculatePlatformCommission(totalPrice);
 
     console.log("Subtotal:", totalPrice);
@@ -593,7 +611,8 @@ export async function POST(request: Request) {
     if (pointsToDeduct > 0 && cashAmount > 0) {
       paymentMethod = "mixed";
     } else if (pointsToDeduct > 0) {
-      paymentMethod = "points";
+      paymentMethod =
+        "points";
     }
 
     console.log("✅ Payment validated");
@@ -611,11 +630,11 @@ export async function POST(request: Request) {
     for (let i = 0; i < items.length; i++) {
       const item = items[i];
       const resolvedItem = itemVariantMap.get(i);
-      
+
       try {
         // Use the variant ID we determined earlier during validation
         const variantIdToReserve = resolvedItem?.variantId || item.variantId;
-        
+
         if (variantIdToReserve) {
           // Reserve variant stock
           const { data: reserveResult, error: reserveError } =
@@ -740,8 +759,8 @@ export async function POST(request: Request) {
     // ============================================
     // 9. CREATE ORDER
     // ============================================
-    console.log("\n📝 Creating order...");
 
+    console.log("\n📝 Creating order...");
     const orderData = {
       user_id: user.id,
       total_price: totalPrice + deliveryFee + platformCommission,
@@ -780,7 +799,6 @@ export async function POST(request: Request) {
           });
         }
       }
-
       return NextResponse.json(
         {
           error: "فشل إنشاء الطلب",
@@ -789,20 +807,16 @@ export async function POST(request: Request) {
         { status: 500 }
       );
     }
-
     console.log("✅ Order created:", order.id);
-
     // ============================================
     // 10. CREATE ORDER ITEMS
     // ============================================
     console.log("\n📦 Creating order items...");
-
     const orderItems = items.map((item, index) => {
       // 🔥 FIX: Get the correct product ID from our resolved mapping
       const resolvedItem = itemVariantMap.get(index);
       const productId = resolvedItem?.productId || item.product.id;
       const variantId = resolvedItem?.variantId || item.variantId || null;
-
       return {
         order_id: order.id,
         product_id: productId,
@@ -812,7 +826,6 @@ export async function POST(request: Request) {
         variant_id: variantId,
       };
     });
-
     console.log("📦 Inserting order items:", {
       count: orderItems.length,
       orderId: order.id,
@@ -823,12 +836,10 @@ export async function POST(request: Request) {
         quantity: item.qty,
       })),
     });
-
     const { data: createdItems, error: itemsError } = await supabase
       .from("order_items")
       .insert(orderItems)
       .select();
-
     if (itemsError) {
       console.error("❌ Order items creation failed:", {
         error: itemsError,
@@ -840,10 +851,8 @@ export async function POST(request: Request) {
         userId: user.id,
         itemsCount: orderItems.length,
       });
-
       // ROLLBACK: Delete order and return stock
       await supabase.from("orders").delete().eq("id", order.id);
-
       for (const reserved of reservedItems) {
         if (reserved.variantId) {
           await supabase.rpc("reserve_variant_stock", {
@@ -857,7 +866,6 @@ export async function POST(request: Request) {
           });
         }
       }
-
       return NextResponse.json(
         {
           error: "فشل إضافة المنتجات للطلب",
@@ -867,15 +875,12 @@ export async function POST(request: Request) {
         { status: 500 }
       );
     }
-
     console.log("✅ Order items created:", createdItems?.length || 0);
-
     // ============================================
     // 11. DEDUCT POINTS (if applicable)
     // ============================================
     if (pointsToDeduct > 0) {
       console.log("\n💎 Deducting points:", pointsToDeduct);
-
       const { data: deductResult, error: deductError } = await supabase.rpc(
         "deduct_points_mixed_payment",
         {
@@ -884,14 +889,11 @@ export async function POST(request: Request) {
           p_points_to_deduct: pointsToDeduct,
         }
       );
-
       if (deductError || !deductResult) {
         console.error("❌ Points deduction failed:", deductError);
-
         // ROLLBACK
         await supabase.from("order_items").delete().eq("order_id", order.id);
         await supabase.from("orders").delete().eq("id", order.id);
-
         for (const reserved of reservedItems) {
           if (reserved.variantId) {
             await supabase.rpc("reserve_variant_stock", {
@@ -905,7 +907,6 @@ export async function POST(request: Request) {
             });
           }
         }
-
         return NextResponse.json(
           {
             error: "فشل خصم النقاط",
@@ -915,10 +916,8 @@ export async function POST(request: Request) {
           { status: 500 }
         );
       }
-
       console.log("✅ Points deducted successfully");
     }
-
     // ============================================
     // 12. 🔥 REVALIDATE CACHE - CRITICAL FOR STOCK UPDATES
     // ============================================
@@ -928,7 +927,6 @@ export async function POST(request: Request) {
       revalidatePath("/", "layout");
       revalidatePath("/products");
       revalidatePath("/products/[id]", "page");
-
       // Revalidate specific product pages for ordered items
       const affectedProductIds = [
         ...new Set(
@@ -947,7 +945,6 @@ export async function POST(request: Request) {
       for (const productId of affectedProductIds) {
         revalidatePath(`/products/${productId}`);
       }
-
       console.log(
         "✅ Cache revalidated - stock updates will appear immediately"
       );
@@ -958,20 +955,17 @@ export async function POST(request: Request) {
       );
       // Non-critical - order is already successful
     }
-
     // ============================================
     // 13. SUCCESS RESPONSE
     // ============================================
     const duration = Date.now() - startTime;
     const potentialPoints =
       cashAmount > 0 ? calculateLoyaltyPoints(cashAmount) : 0;
-
     console.log("\n===========================================");
     console.log("🎉 CHECKOUT COMPLETED SUCCESSFULLY");
     console.log("Order ID:", order.id);
     console.log("Duration:", duration, "ms");
     console.log("===========================================\n");
-
     return NextResponse.json({
       success: true,
       order: {
@@ -996,7 +990,6 @@ export async function POST(request: Request) {
     console.error("Duration:", duration, "ms");
     console.error("Error:", error);
     console.error("===========================================\n");
-
     return NextResponse.json(
       {
         error: "حدث خطأ غير متوقع",
