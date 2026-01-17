@@ -21,6 +21,8 @@ interface Driver {
 export default function DriverManagementComponent() {
   const [drivers, setDrivers] = useState<Driver[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Edit State
   const [editingDriver, setEditingDriver] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<{
     region: string;
@@ -31,6 +33,18 @@ export default function DriverManagementComponent() {
     vehicle_info: "",
     active: true,
   });
+
+  // Add Driver State
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [userSearchQuery, setUserSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [selectedUser, setSelectedUser] = useState<any | null>(null);
+  const [newDriverForm, setNewDriverForm] = useState({
+    vehicle_info: "",
+    region: "",
+  });
+  const [isSearching, setIsSearching] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
 
   const regions = [
     "دمشق",
@@ -53,6 +67,37 @@ export default function DriverManagementComponent() {
     fetchDrivers();
   }, []);
 
+  // Search users debounce
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (userSearchQuery.length >= 2) {
+        searchUsers();
+      } else {
+        setSearchResults([]);
+      }
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [userSearchQuery]);
+
+  const searchUsers = async () => {
+    try {
+      setIsSearching(true);
+      const response = await fetch(`/api/admin/users?q=${encodeURIComponent(userSearchQuery)}`);
+      if (response.ok) {
+        const data = await response.json();
+        // Filter out users who are already drivers (client-side simple check)
+        const existingDriverIds = new Set(drivers.map(d => d.user_id));
+        const filteredUsers = data.users.filter((u: any) => !existingDriverIds.has(u.id));
+        setSearchResults(filteredUsers);
+      }
+    } catch (error) {
+      console.error("Error searching users:", error);
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
   const fetchDrivers = async () => {
     try {
       setLoading(true);
@@ -65,6 +110,42 @@ export default function DriverManagementComponent() {
       toast.error("فشل تحميل قائمة السائقين");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleCreateDriver = async () => {
+    if (!selectedUser || !newDriverForm.vehicle_info) {
+      toast.error("يرجى اختيار مستخدم وإدخال معلومات المركبة");
+      return;
+    }
+
+    try {
+      setIsCreating(true);
+      const response = await fetch("/api/admin/drivers", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          user_id: selectedUser.id,
+          vehicle_info: newDriverForm.vehicle_info,
+        }),
+      });
+
+      if (response.ok) {
+        toast.success("تم إضافة السائق بنجاح ✅");
+        await fetchDrivers();
+        setIsAddModalOpen(false);
+        // Reset form
+        setSelectedUser(null);
+        setNewDriverForm({ vehicle_info: "", region: "" });
+        setUserSearchQuery("");
+      } else {
+        const data = await response.json();
+        toast.error(data.error || "فشل إضافة السائق");
+      }
+    } catch (error) {
+      toast.error("حدث خطأ أثناء إضافة السائق");
+    } finally {
+      setIsCreating(false);
     }
   };
 
@@ -105,7 +186,7 @@ export default function DriverManagementComponent() {
     }
   };
 
-  if (loading) {
+  if (loading && drivers.length === 0) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
@@ -117,11 +198,148 @@ export default function DriverManagementComponent() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold text-gray-900">إدارة السائقين</h2>
-        <div className="text-sm text-gray-600">
-          إجمالي السائقين: {drivers.length} | النشطين:{" "}
-          {drivers.filter((d) => d.active).length}
+        <div className="flex items-center gap-4">
+          <div className="text-sm text-gray-600">
+            إجمالي السائقين: {drivers.length} | النشطين:{" "}
+            {drivers.filter((d) => d.active).length}
+          </div>
+          <button
+            onClick={() => setIsAddModalOpen(true)}
+            className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 font-bold shadow-md transition-all"
+          >
+            <Truck className="h-4 w-4" />
+            إضافة سائق جديد
+          </button>
         </div>
       </div>
+
+      {/* Add Driver Modal */}
+      {isAddModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in duration-200">
+            <div className="p-6 border-b bg-gray-50 flex justify-between items-center">
+              <h3 className="text-xl font-bold text-gray-900">إضافة سائق جديد</h3>
+              <button
+                onClick={() => setIsAddModalOpen(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-6">
+              {/* Step 1: Select User */}
+              <div className="space-y-2">
+                <label className="text-sm font-bold text-gray-700">1. البحث عن المستخدم</label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    placeholder="ابحث بالاسم أو رقم الهاتف..."
+                    value={userSearchQuery}
+                    onChange={(e) => setUserSearchQuery(e.target.value)}
+                    className="w-full px-4 py-2 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
+                  />
+                  {isSearching && (
+                    <div className="absolute left-3 top-3">
+                      <div className="animate-spin rounded-full h-4 w-4 border-2 border-blue-500 border-t-transparent"></div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Search Results */}
+                {userSearchQuery.length >= 2 && !selectedUser && (
+                  <div className="mt-2 border rounded-xl max-h-48 overflow-y-auto bg-gray-50/50">
+                    {searchResults.length > 0 ? (
+                      searchResults.map((user) => (
+                        <div
+                          key={user.id}
+                          onClick={() => {
+                            setSelectedUser(user);
+                            setUserSearchQuery("");
+                          }}
+                          className="p-3 hover:bg-blue-50 cursor-pointer border-b last:border-0 flex justify-between items-center"
+                        >
+                          <div>
+                            <p className="font-bold text-gray-900">{user.name}</p>
+                            <p className="text-xs text-gray-500">{user.phone}</p>
+                          </div>
+                          <span className="text-xs bg-gray-200 px-2 py-1 rounded-full text-gray-600">
+                            {user.role}
+                          </span>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="p-4 text-center text-gray-500 text-sm">
+                        {isSearching ? "جاري البحث..." : "لا يوجد مستخدمين بهذا الاسم"}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Selected User */}
+                {selectedUser && (
+                  <div className="mt-2 bg-blue-50 border border-blue-200 rounded-xl p-3 flex justify-between items-center">
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 bg-blue-200 rounded-full flex items-center justify-center text-blue-700 font-bold">
+                        {selectedUser.name.charAt(0)}
+                      </div>
+                      <div>
+                        <p className="font-bold text-blue-900">{selectedUser.name}</p>
+                        <p className="text-xs text-blue-700">{selectedUser.phone}</p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setSelectedUser(null)}
+                      className="text-red-500 hover:text-red-700 text-sm font-bold px-2"
+                    >
+                      تغيير
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Step 2: Vehicle Info */}
+              {selectedUser && (
+                <div className="space-y-4 animate-in slide-in-from-top-2 fade-in duration-300">
+                  <div className="space-y-2">
+                    <label className="text-sm font-bold text-gray-700">2. معلومات المركبة</label>
+                    <input
+                      type="text"
+                      placeholder="مثال: كيا ريو - بيضاء - 123456"
+                      value={newDriverForm.vehicle_info}
+                      onChange={(e) => setNewDriverForm({ ...newDriverForm, vehicle_info: e.target.value })}
+                      className="w-full px-4 py-2 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="p-6 border-t bg-gray-50 flex gap-3 justify-end">
+              <button
+                onClick={() => setIsAddModalOpen(false)}
+                className="px-4 py-2 rounded-xl font-bold text-gray-600 hover:bg-gray-200 transition-colors"
+              >
+                إلغاء
+              </button>
+              <button
+                onClick={handleCreateDriver}
+                disabled={!selectedUser || !newDriverForm.vehicle_info || isCreating}
+                className="px-6 py-2 rounded-xl font-bold bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg transition-all flex items-center gap-2"
+              >
+                {isCreating ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                    جاري الإضافة...
+                  </>
+                ) : (
+                  "تأكيد وإضافة"
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Drivers Table */}
       <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
@@ -214,11 +432,10 @@ export default function DriverManagementComponent() {
                       <div className="flex items-center gap-2">
                         <MapPin className="h-4 w-4 text-gray-400" />
                         <span
-                          className={`text-sm ${
-                            driver.region
+                          className={`text-sm ${driver.region
                               ? "text-gray-900"
                               : "text-gray-400 italic"
-                          }`}
+                            }`}
                         >
                           {driver.region || "غير محدد"}
                         </span>
@@ -243,11 +460,10 @@ export default function DriverManagementComponent() {
                       </label>
                     ) : (
                       <span
-                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          driver.active
+                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${driver.active
                             ? "bg-green-100 text-green-800"
                             : "bg-red-100 text-red-800"
-                        }`}
+                          }`}
                       >
                         {driver.active ? "نشط" : "غير نشط"}
                       </span>
@@ -288,10 +504,16 @@ export default function DriverManagementComponent() {
         </div>
       </div>
 
-      {drivers.length === 0 && (
+      {drivers.length === 0 && !loading && (
         <div className="text-center py-12 bg-white rounded-lg border">
           <Truck className="h-12 w-12 text-gray-400 mx-auto mb-3" />
           <p className="text-gray-500">لا يوجد سائقين مسجلين</p>
+          <button
+            onClick={() => setIsAddModalOpen(true)}
+            className="mt-4 text-blue-600 hover:text-blue-800 font-bold"
+          >
+            إضافة سائق جديد
+          </button>
         </div>
       )}
     </div>

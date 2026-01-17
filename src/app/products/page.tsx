@@ -300,14 +300,13 @@ export default function ProductsPage() {
                             {formatCurrency(selectedVariant?.price || product.price)}
                           </p>
                         </div>
-                        
+
                         {hasVariants && selectedVariant ? (
                           <span
-                            className={`text-xs font-semibold px-3 py-1 rounded-full flex items-center gap-1 ${
-                              (selectedVariant.stock_estimate || 0) > 0
+                            className={`text-xs font-semibold px-3 py-1 rounded-full flex items-center gap-1 ${(selectedVariant.stock_estimate || 0) > 0
                                 ? "bg-green-50 text-green-600"
                                 : "bg-red-50 text-red-600"
-                            }`}
+                              }`}
                           >
                             {(selectedVariant.stock_estimate || 0) > 0 ? (
                               <>
@@ -323,11 +322,10 @@ export default function ProductsPage() {
                           </span>
                         ) : !hasVariants ? (
                           <span
-                            className={`text-xs font-semibold px-3 py-1 rounded-full ${
-                              (product.stock_estimate || 0) > 0
+                            className={`text-xs font-semibold px-3 py-1 rounded-full ${(product.stock_estimate || 0) > 0
                                 ? "bg-green-50 text-green-600"
                                 : "bg-red-50 text-red-600"
-                            }`}
+                              }`}
                           >
                             {(product.stock_estimate || 0) > 0
                               ? `متوفر (${product.stock_estimate})`
@@ -373,7 +371,7 @@ export default function ProductsPage() {
                             paddingLeft: "2.5rem",
                           }}
                         >
-                          <option value="">🎨 اختر النكهة</option>
+                          <option value=""> اختر النكهة</option>
                           {productVariants.map((variant) => {
                             const isOutOfStock = (variant.stock_estimate || 0) === 0;
                             return (
@@ -483,17 +481,16 @@ export default function ProductsPage() {
                           setAddingToCart(null);
                         }
                       }}
-                      className={`w-full py-3 rounded-2xl transition-all flex items-center justify-center gap-2 font-semibold text-sm ${
-                        hasVariants && !selectedVariantId
+                      className={`w-full py-3 rounded-2xl transition-all flex items-center justify-center gap-2 font-semibold text-sm ${hasVariants && !selectedVariantId
                           ? "bg-gray-200 text-gray-500 cursor-not-allowed"
                           : hasVariants &&
                             selectedVariant &&
                             (selectedVariant.stock_estimate || 0) === 0
-                          ? "bg-red-100 text-red-600 cursor-not-allowed"
-                          : !hasVariants && (product.stock_estimate || 0) === 0
-                          ? "bg-red-100 text-red-600 cursor-not-allowed"
-                          : "bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:from-blue-700 hover:to-blue-800"
-                      }`}
+                            ? "bg-red-100 text-red-600 cursor-not-allowed"
+                            : !hasVariants && (product.stock_estimate || 0) === 0
+                              ? "bg-red-100 text-red-600 cursor-not-allowed"
+                              : "bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:from-blue-700 hover:to-blue-800"
+                        }`}
                       disabled={
                         addingToCart === product.id ||
                         (hasVariants && !selectedVariantId) ||

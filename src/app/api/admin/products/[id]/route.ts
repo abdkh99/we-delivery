@@ -90,7 +90,7 @@ export async function PUT(
 
       const variantUpdates = variants.map((variant) => {
         const newVariantPrice = Math.round(variant.price * priceRatio);
-        
+
         // If variant has usd_price, recalculate based on new rate
         if (variant.usd_price && oldProduct.price > 0) {
           const newRate = price / (oldProduct.price / (variant.usd_price || 1));
@@ -121,8 +121,8 @@ export async function PUT(
 
     // 🔥 CRITICAL: Revalidate cache if stock or price changed
     const stockChanged = oldProduct && oldProduct.stock_estimate !== stock_estimate;
-    
-    
+
+
     if (stockChanged || priceChanged) {
       console.log(`🔄 Revalidating cache for product ${id} (stock: ${stockChanged}, price: ${priceChanged})`);
       try {
@@ -131,11 +131,11 @@ export async function PUT(
         revalidatePath("/products");
         revalidatePath("/products/[id]", "page");
         revalidatePath(`/products/${id}`);
-        
+
         // Revalidate admin pages
         revalidatePath("/admin");
         revalidatePath("/admin/products");
-        
+
         console.log("✅ Cache revalidated - updates will appear immediately");
       } catch (revalidateError) {
         console.error("⚠️ Cache revalidation warning (non-critical):", revalidateError);
@@ -208,7 +208,7 @@ export async function DELETE(
       revalidatePath(`/products/${id}`);
       revalidatePath("/admin");
       revalidatePath("/admin/products");
-      
+
       console.log("✅ Cache revalidated");
     } catch (revalidateError) {
       console.error("⚠️ Cache revalidation warning (non-critical):", revalidateError);

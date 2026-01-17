@@ -561,13 +561,13 @@ export default function DriverDashboard() {
                                       </p>
                                       {flavor && (
                                         <p className="text-xs text-blue-600 font-medium mb-1">
-                                          🍕 النكهة:{" "}
+                                          النكهة:{" "}
                                           {flavor.name_ar || flavor.name}
                                         </p>
                                       )}
                                       {variant && (
                                         <p className="text-xs text-purple-600 font-medium mb-1">
-                                          🎨 الصنف: {variant.variant_name}
+                                          الصنف: {variant.variant_name}
                                         </p>
                                       )}
                                       <div className="flex items-center gap-3 mt-2 text-xs text-gray-600">
@@ -651,16 +651,16 @@ export default function DriverDashboard() {
                       )}
                       {(delivery.status === "assigned" ||
                         delivery.status === "on_way") && (
-                        <a
-                          href={`https://www.google.com/maps/dir/?api=1&destination=${delivery.orders.lat},${delivery.orders.lng}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="w-full sm:flex-1 inline-flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl text-base font-bold hover:from-blue-700 hover:to-blue-800 transition-all shadow-lg hover:shadow-xl"
-                        >
-                          <NavigationIcon className="h-5 w-5" />
-                          <span>التنقل</span>
-                        </a>
-                      )}
+                          <a
+                            href={`https://www.google.com/maps/dir/?api=1&destination=${delivery.orders.lat},${delivery.orders.lng}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="w-full sm:flex-1 inline-flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl text-base font-bold hover:from-blue-700 hover:to-blue-800 transition-all shadow-lg hover:shadow-xl"
+                          >
+                            <NavigationIcon className="h-5 w-5" />
+                            <span>التنقل</span>
+                          </a>
+                        )}
                     </div>
                   </div>
                 </div>

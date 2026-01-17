@@ -42,14 +42,42 @@ async function calculateDynamicDeliveryFee(supabase: any, totalPrice: number): P
     return DEFAULT_FEE;
   }
 }
-function calculatePlatformCommission(totalPrice: number): number {
-  const COMMISSION_THRESHOLD = 10000;
-  const COMMISSION_RATE = 0.05; // 5%
+async function calculateDynamicPlatformCommission(supabase: any, totalPrice: number): Promise<number> {
+  const DEFAULT_RATE = 0.05; // 5% fallback
+  try {
+    const { data: settings, error } = await supabase
+      .from("commission_settings")
+      .select("*")
+      .eq("is_active", true)
+      .order("min_order_amount", { ascending: true });
 
-  if (totalPrice <= COMMISSION_THRESHOLD) {
-    return 0;
+    if (error) {
+      console.error("Error fetching commission settings:", error);
+      // Fallback to default
+      return Math.round(totalPrice * DEFAULT_RATE);
+    }
+
+    if (!settings || settings.length === 0) {
+      // Fallback to default rate
+      return Math.round(totalPrice * DEFAULT_RATE);
+    }
+
+    // Find matching tier
+    for (const setting of settings) {
+      const min = Number(setting.min_order_amount) || 0;
+      const max = setting.max_order_amount === null ? Infinity : Number(setting.max_order_amount);
+      if (totalPrice >= min && totalPrice < max) {
+        const rate = Number(setting.commission_percentage) / 100;
+        return Math.round(totalPrice * rate);
+      }
+    }
+
+    // If no tier matched, use default
+    return Math.round(totalPrice * DEFAULT_RATE);
+  } catch (error) {
+    console.error("Error calculating platform commission:", error);
+    return Math.round(totalPrice * DEFAULT_RATE);
   }
-  return Math.round(totalPrice * COMMISSION_RATE);
 }
 
 function calculateLoyaltyPoints(amount: number): number {
@@ -563,7 +591,7 @@ export async function POST(request: Request) {
     );
 
     const deliveryFee = await calculateDynamicDeliveryFee(supabase, totalPrice);
-    const platformCommission = calculatePlatformCommission(totalPrice);
+    const platformCommission = await calculateDynamicPlatformCommission(supabase, totalPrice);
 
     console.log("Subtotal:", totalPrice);
     console.log("Delivery:", deliveryFee);
