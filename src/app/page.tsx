@@ -23,11 +23,19 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setLoading(false);
-    }, 2500);
+    // Check if user has visited in this session
+    const hasVisited = sessionStorage.getItem("hasVisitedHome");
 
-    return () => clearTimeout(timer);
+    if (hasVisited) {
+      setLoading(false);
+    } else {
+      const timer = setTimeout(() => {
+        setLoading(false);
+        sessionStorage.setItem("hasVisitedHome", "true");
+      }, 2500);
+
+      return () => clearTimeout(timer);
+    }
   }, []);
 
   if (loading) {

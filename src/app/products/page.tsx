@@ -290,7 +290,7 @@ export default function ProductsPage() {
                       </h3>
 
                       <p className="text-sm text-gray-600 mt-2 line-clamp-2 min-h-[40px]">
-                        {product.description || "منتج طازج من موردينا المحليين."}
+                        {product.description || ""}
                       </p>
 
                       <div className="flex items-center justify-between mt-4">
@@ -304,8 +304,8 @@ export default function ProductsPage() {
                         {hasVariants && selectedVariant ? (
                           <span
                             className={`text-xs font-semibold px-3 py-1 rounded-full flex items-center gap-1 ${(selectedVariant.stock_estimate || 0) > 0
-                                ? "bg-green-50 text-green-600"
-                                : "bg-red-50 text-red-600"
+                              ? "bg-green-50 text-green-600"
+                              : "bg-red-50 text-red-600"
                               }`}
                           >
                             {(selectedVariant.stock_estimate || 0) > 0 ? (
@@ -323,8 +323,8 @@ export default function ProductsPage() {
                         ) : !hasVariants ? (
                           <span
                             className={`text-xs font-semibold px-3 py-1 rounded-full ${(product.stock_estimate || 0) > 0
-                                ? "bg-green-50 text-green-600"
-                                : "bg-red-50 text-red-600"
+                              ? "bg-green-50 text-green-600"
+                              : "bg-red-50 text-red-600"
                               }`}
                           >
                             {(product.stock_estimate || 0) > 0
@@ -482,14 +482,14 @@ export default function ProductsPage() {
                         }
                       }}
                       className={`w-full py-3 rounded-2xl transition-all flex items-center justify-center gap-2 font-semibold text-sm ${hasVariants && !selectedVariantId
-                          ? "bg-gray-200 text-gray-500 cursor-not-allowed"
-                          : hasVariants &&
-                            selectedVariant &&
-                            (selectedVariant.stock_estimate || 0) === 0
+                        ? "bg-gray-200 text-gray-500 cursor-not-allowed"
+                        : hasVariants &&
+                          selectedVariant &&
+                          (selectedVariant.stock_estimate || 0) === 0
+                          ? "bg-red-100 text-red-600 cursor-not-allowed"
+                          : !hasVariants && (product.stock_estimate || 0) === 0
                             ? "bg-red-100 text-red-600 cursor-not-allowed"
-                            : !hasVariants && (product.stock_estimate || 0) === 0
-                              ? "bg-red-100 text-red-600 cursor-not-allowed"
-                              : "bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:from-blue-700 hover:to-blue-800"
+                            : "bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:from-blue-700 hover:to-blue-800"
                         }`}
                       disabled={
                         addingToCart === product.id ||

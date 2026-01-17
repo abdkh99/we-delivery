@@ -7,6 +7,7 @@ import Navigation from "@/components/Navigation";
 import { ArrowLeft, Plus, Trash2, Info, Package, DollarSign, Tag, Boxes } from "lucide-react";
 import { toast } from "sonner";
 import { formatCurrency } from "@/lib/utils";
+import ImageUploader from "@/components/ImageUploader";
 
 interface Flavor {
   id: string;
@@ -75,7 +76,7 @@ export default function AddProductPage() {
     }
     const usd = parseFloat(formData.usd_price);
     if (isNaN(usd)) return null;
-    return Math.ceil((usd * rateInfo.rate) / 500) * 500;
+    return Math.ceil((usd * rateInfo.rate) / 5) * 5;
   };
 
   const categories = [
@@ -351,22 +352,20 @@ export default function AddProductPage() {
                   <button
                     type="button"
                     onClick={() => setPricingMode("usd")}
-                    className={`py-4 px-4 rounded-xl border-2 font-bold transition-all shadow-sm ${
-                      pricingMode === "usd"
-                        ? "border-blue-600 bg-blue-600 text-white shadow-lg scale-105"
-                        : "border-gray-300 bg-white text-gray-700 hover:border-blue-400 hover:shadow-md"
-                    }`}
+                    className={`py-4 px-4 rounded-xl border-2 font-bold transition-all shadow-sm ${pricingMode === "usd"
+                      ? "border-blue-600 bg-blue-600 text-white shadow-lg scale-105"
+                      : "border-gray-300 bg-white text-gray-700 hover:border-blue-400 hover:shadow-md"
+                      }`}
                   >
                     💵 تسعير بالدولار
                   </button>
                   <button
                     type="button"
                     onClick={() => setPricingMode("syp")}
-                    className={`py-4 px-4 rounded-xl border-2 font-bold transition-all shadow-sm ${
-                      pricingMode === "syp"
-                        ? "border-green-600 bg-green-600 text-white shadow-lg scale-105"
-                        : "border-gray-300 bg-white text-gray-700 hover:border-green-400 hover:shadow-md"
-                    }`}
+                    className={`py-4 px-4 rounded-xl border-2 font-bold transition-all shadow-sm ${pricingMode === "syp"
+                      ? "border-green-600 bg-green-600 text-white shadow-lg scale-105"
+                      : "border-gray-300 bg-white text-gray-700 hover:border-green-400 hover:shadow-md"
+                      }`}
                   >
                     💰 تسعير بالليرة
                   </button>
@@ -400,11 +399,11 @@ export default function AddProductPage() {
                           <div className="space-y-2 text-sm text-green-800 font-medium bg-white/50 rounded-lg p-3 border border-green-200">
                             <p className="flex items-center gap-2">
                               <span className="text-base">📅</span>
-                              آخر تحديث: {new Date(rateInfo.fetchedAt).toLocaleDateString("ar-SY", { 
-                                weekday: 'long', 
-                                year: 'numeric', 
-                                month: 'long', 
-                                day: 'numeric' 
+                              آخر تحديث: {new Date(rateInfo.fetchedAt).toLocaleDateString("ar-SY", {
+                                weekday: 'long',
+                                year: 'numeric',
+                                month: 'long',
+                                day: 'numeric'
                               })}
                             </p>
                             <p className="flex items-center gap-2">
@@ -542,18 +541,14 @@ export default function AddProductPage() {
               />
             </div>
 
-            {/* Image URL */}
+            {/* Image Upload */}
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
-                رابط الصورة
+                صورة المنتج
               </label>
-              <input
-                type="url"
-                name="image_url"
+              <ImageUploader
                 value={formData.image_url}
-                onChange={handleChange}
-                className="w-full border-2 border-gray-300 rounded-xl px-4 py-3 text-gray-900 font-medium bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all hover:border-gray-400"
-                placeholder="https://example.com/image.jpg"
+                onChange={(url) => setFormData({ ...formData, image_url: url })}
               />
             </div>
 
@@ -678,7 +673,7 @@ export default function AddProductPage() {
                               onChange={(e) =>
                                 updateFlavor(
                                   flavor.id,
-                                  "image_url", 
+                                  "image_url",
                                   e.target.value
                                 )
                               }

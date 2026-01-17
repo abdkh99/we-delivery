@@ -6,9 +6,10 @@ import { NextResponse } from "next/server";
 import { ensureUsdToSypRate } from "@/lib/currency";
 
 function roundPrice(price: number): number {
-  const ROUNDING_BASE = 500;
-  if (price <= 0) return ROUNDING_BASE;
-  return Math.ceil(price / ROUNDING_BASE) * ROUNDING_BASE;
+  const ROUNDING_BASE = 5;
+  if (price <= 0) return 5;
+  const rounded = Math.ceil(price / ROUNDING_BASE) * ROUNDING_BASE;
+  return rounded < 5 ? 5 : rounded;
 }
 
 export async function POST(request: Request) {
@@ -166,8 +167,7 @@ export async function POST(request: Request) {
       rateUsed = rateInfo.rate;
 
       console.log(
-        `💰 Calculation: $${usdVal} × ${rateInfo.rate} = ${
-          usdVal * rateInfo.rate
+        `💰 Calculation: $${usdVal} × ${rateInfo.rate} = ${usdVal * rateInfo.rate
         }`
       );
       console.log(`💰 Rounded: ${finalPrice} SYP`);
@@ -272,7 +272,7 @@ export async function POST(request: Request) {
         const variantPrice = usdPriceValue && rateUsed
           ? roundPrice(usdPriceValue * rateUsed)
           : finalPrice;
-        
+
         return {
           master_product_id: product.id,
           variant_name: f.name_ar || f.name, // Use Arabic name as variant name
@@ -304,7 +304,7 @@ export async function POST(request: Request) {
         // Don't fail the whole operation, just log the error
       } else {
         console.log(`✅ ${variantData.length} variants added`);
-        
+
         // Update product to indicate it has variants
         await supabase
           .from("products")

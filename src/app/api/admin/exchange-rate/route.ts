@@ -6,12 +6,13 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 
 /**
- * تقريب السعر
+ * تقريب السعر لأقرب 5
  */
 function roundPrice(price: number): number {
-  const ROUNDING_BASE = 500;
-  if (price <= 0) return ROUNDING_BASE;
-  return Math.ceil(price / ROUNDING_BASE) * ROUNDING_BASE;
+  const ROUNDING_BASE = 5;
+  if (price <= 0) return 5;
+  const rounded = Math.ceil(price / ROUNDING_BASE) * ROUNDING_BASE;
+  return rounded < 5 ? 5 : rounded;
 }
 
 /**
@@ -102,21 +103,14 @@ export async function POST(request: Request) {
       );
     }
 
-    if (rateValue < 5000 || rateValue > 50000) {
-      console.log("❌ Rate out of range:", rateValue);
-      return NextResponse.json(
-        { error: "Rate must be between 5,000 and 50,000" },
-        { status: 400 }
-      );
-    }
+
 
     console.log("✅ Rate received:", rateValue);
 
-    // 3. تقريب السعر
-    console.log("\n3️⃣ Rounding rate...");
-    const roundedRate = roundPrice(rateValue);
-    console.log(`📊 Raw: ${rateValue}`);
-    console.log(`📊 Rounded: ${roundedRate}`);
+    // 3. تقريب السعر - تم الإلغاء لطلب المستخدم
+    // const roundedRate = roundPrice(rateValue);
+    const roundedRate = rateValue;
+    console.log(`📊 Rate: ${roundedRate}`);
 
     // 4. جلب آخر سعر محفوظ
     console.log("\n4️⃣ Getting last saved rate...");

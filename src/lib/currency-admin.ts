@@ -4,12 +4,13 @@
 import { createClient } from "@/lib/supabase/server";
 
 /**
- * تقريب السعر إلى أقرب 500
+ * تقريب السعر إلى أقرب 5
  */
 function roundPrice(price: number): number {
-  const ROUNDING_BASE = 500;
-  if (price <= 0) return ROUNDING_BASE;
-  return Math.ceil(price / ROUNDING_BASE) * ROUNDING_BASE;
+  const ROUNDING_BASE = 5;
+  if (price <= 0) return 5;
+  const rounded = Math.ceil(price / ROUNDING_BASE) * ROUNDING_BASE;
+  return rounded < 5 ? 5 : rounded;
 }
 
 /**

@@ -90,7 +90,7 @@ export async function POST(request: Request) {
 
     for (const product of products) {
       // حساب السعر الجديد بالليرة
-    const newPrice = roundPrice((product.usd_price || 0) * rateInfo.rate);
+      const newPrice = roundPrice((product.usd_price || 0) * rateInfo.rate);
       // تحديث فقط إذا تغير السعر أو السعر القديم مختلف
       if (
         newPrice !== product.price ||
@@ -143,7 +143,7 @@ export async function POST(request: Request) {
 
     if (!variantsError && variants) {
       for (const variant of variants) {
-        const newPrice = Math.ceil((variant.usd_price || 0) * rateInfo.rate);
+        const newPrice = roundPrice((variant.usd_price || 0) * rateInfo.rate);
 
         if (
           newPrice !== variant.price ||

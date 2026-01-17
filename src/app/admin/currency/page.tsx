@@ -74,14 +74,14 @@ export default function CurrencyManagementPage() {
     }
 
     const rateValue = Number(newRate);
-    if (rateValue < 5000 || rateValue > 50000) {
-      toast.error("السعر يجب أن يكون بين 5,000 و 50,000");
+    if (rateValue <= 0) {
+      toast.error("السعر يجب أن يكون أكبر من 0");
       return;
     }
 
     try {
       setIsSaving(true);
-      
+
       const response = await fetch("/api/admin/exchange-rate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -94,14 +94,14 @@ export default function CurrencyManagementPage() {
       }
 
       const result = await response.json();
-      
+
       setCurrentRate(result.rate);
       setNewRate("");
-      
+
       toast.success("تم تحديث السعر بنجاح! ✅", {
         description: `السعر الجديد: ${formatCurrency(result.rate)}\nتم تحديث ${result.updatedProductsCount || 0} منتج`,
       });
-      
+
       // تحديث السجل
       fetchHistory();
     } catch (error: any) {
@@ -151,7 +151,7 @@ export default function CurrencyManagementPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
       <Navigation />
-      
+
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
@@ -219,9 +219,7 @@ export default function CurrencyManagementPage() {
                 />
                 <DollarSign className="absolute right-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
               </div>
-              <p className="text-xs text-gray-500 mt-2">
-                القيمة المسموحة: بين 5,000 و 50,000 ليرة
-              </p>
+
             </div>
 
             <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
@@ -300,11 +298,10 @@ export default function CurrencyManagementPage() {
                       </div>
                     </div>
                     <div className="text-right">
-                      <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
-                        rate.is_manual 
-                          ? "bg-blue-100 text-blue-800" 
-                          : "bg-gray-100 text-gray-800"
-                      }`}>
+                      <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${rate.is_manual
+                        ? "bg-blue-100 text-blue-800"
+                        : "bg-gray-100 text-gray-800"
+                        }`}>
                         {rate.is_manual ? "يدوي" : "تلقائي"}
                       </span>
                     </div>

@@ -19,7 +19,7 @@ export function cn(...inputs: ClassValue[]) {
  *
  * 👇 غيّر هذا الرقم فقط عند تغيير العملة!
  */
-export const PRICE_ROUNDING_BASE = 500;
+export const PRICE_ROUNDING_BASE = 5;
 
 // ============================================
 // 🧮 دوال التقريب
@@ -32,13 +32,14 @@ export const PRICE_ROUNDING_BASE = 500;
  * @returns السعر المقرب
  *
  * @example
- * roundPrice(4437) → 4500
- * roundPrice(2300) → 2500
- * roundPrice(1100) → 1500
+ * roundPrice(24) → 25
+ * roundPrice(23) → 25
+ * roundPrice(11) → 15
  */
 export function roundPrice(price: number): number {
-  if (price <= 0) return PRICE_ROUNDING_BASE;
-  return Math.ceil(price / PRICE_ROUNDING_BASE) * PRICE_ROUNDING_BASE;
+  if (price <= 0) return 5;
+  const rounded = Math.ceil(price / PRICE_ROUNDING_BASE) * PRICE_ROUNDING_BASE;
+  return rounded < 5 ? 5 : rounded;
 }
 
 /**

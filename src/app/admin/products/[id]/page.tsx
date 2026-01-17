@@ -7,6 +7,7 @@ import Navigation from "@/components/Navigation";
 import { ArrowLeft, Save, Trash2, Info, Package, DollarSign, Tag, Boxes } from "lucide-react";
 import { toast } from "sonner";
 import { formatCurrency } from "@/lib/utils";
+import ImageUploader from "@/components/ImageUploader";
 
 interface Flavor {
     id: string; // generated client-side for temp, or db id
@@ -118,7 +119,7 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
         if (pricingMode !== "usd" || !rateInfo || !formData.usd_price) return null;
         const usd = parseFloat(formData.usd_price);
         if (isNaN(usd)) return null;
-        return Math.ceil((usd * rateInfo.rate) / 500) * 500;
+        return Math.ceil((usd * rateInfo.rate) / 5) * 5;
     };
 
     const categories = ["Dairy", "Bakery", "Grains", "Cooking", "Vegetables", "Meat", "Spices", "Beverages", "Snacks", "Frozen", "Other"];
@@ -327,8 +328,11 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
                             <textarea name="description" rows={3} value={formData.description} onChange={handleChange} className="w-full border-2 border-gray-300 rounded-xl px-4 py-3 resize-none" />
                         </div>
                         <div>
-                            <label className="block text-sm font-semibold text-gray-700 mb-2">رابط الصورة</label>
-                            <input type="url" name="image_url" value={formData.image_url} onChange={handleChange} className="w-full border-2 border-gray-300 rounded-xl px-4 py-3" />
+                            <label className="block text-sm font-semibold text-gray-700 mb-2">صورة المنتج</label>
+                            <ImageUploader
+                                value={formData.image_url}
+                                onChange={(url) => setFormData({ ...formData, image_url: url })}
+                            />
                         </div>
 
                         {/* Submit */}
