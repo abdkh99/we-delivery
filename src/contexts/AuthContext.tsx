@@ -83,7 +83,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           .select("*")
           .eq("id", userId)
           .maybeSingle();
-        
+
         const profileTimeout = new Promise((_, reject) =>
           setTimeout(() => reject(new Error("Profile fetch timeout")), 10000)
         );
@@ -95,13 +95,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         if (error) {
           console.error("Error fetching profile:", error);
-          
+
           // Retry on network errors or 500 errors
           if (retry < maxRetries && (error.code === 'PGRST116' || error.code?.startsWith('5'))) {
             setTimeout(() => fetchProfile(userId, retry + 1), 1000 * (retry + 1));
             return;
           }
-          
+
           setProfileLoading(false);
           return;
         }
@@ -139,7 +139,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       } catch (error: any) {
         console.error("Unexpected error in fetchProfile:", error);
-        
+
         // Retry on timeout or network errors
         if (retry < maxRetries && (error.message?.includes("timeout") || error.message?.includes("NetworkError"))) {
           setTimeout(() => fetchProfile(userId, retry + 1), 1000 * (retry + 1));

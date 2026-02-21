@@ -9,7 +9,14 @@ export async function GET() {
       .from("products")
       .select(
         `
-        *,
+        id,
+        name,
+        price,
+        image_url,
+        category,
+        stock_estimate,
+        description,
+        created_at,
         product_variants (
           id,
           master_product_id,
@@ -18,8 +25,6 @@ export async function GET() {
           price,
           stock_estimate,
           image_url,
-          description,
-          display_order,
           is_active
         )
       `
@@ -46,7 +51,8 @@ export async function GET() {
       { products: sanitizedProducts },
       {
         headers: {
-          "Cache-Control": "public, s-maxage=60, stale-while-revalidate=120",
+          // CDN/server cache to reduce TTFB + API latency
+          "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600",
         },
       }
     );

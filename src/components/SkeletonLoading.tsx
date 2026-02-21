@@ -20,9 +20,8 @@ export const SkeletonText = ({ lines = 1, className = "" }: { lines?: number; cl
     {Array.from({ length: lines }).map((_, i) => (
       <div
         key={i}
-        className={`h-4 bg-gray-200 rounded animate-pulse ${
-          i === lines - 1 ? "w-4/5" : "w-full"
-        }`}
+        className={`h-4 bg-gray-200 rounded animate-pulse ${i === lines - 1 ? "w-4/5" : "w-full"
+          }`}
       ></div>
     ))}
   </div>
@@ -87,7 +86,7 @@ export const CartPageSkeleton = () => (
   <div className="min-h-screen bg-gray-50">
     <div className="max-w-4xl mx-auto px-4 py-8 space-y-6">
       <SkeletonBox className="h-10 w-48" />
-      
+
       {[1, 2, 3].map((i) => (
         <div key={i} className="bg-white rounded-xl p-6 space-y-4">
           <div className="flex gap-4">
@@ -238,14 +237,14 @@ export const AuthPageSkeleton = () => (
           <SkeletonBox className="h-10 w-48 mx-auto" />
           <SkeletonText lines={1} className="w-64 mx-auto" />
         </div>
-        
+
         {[1, 2, 3].map((i) => (
           <div key={i} className="space-y-2">
             <SkeletonBox className="h-4 w-24" />
             <SkeletonBox className="h-12 w-full rounded-lg" />
           </div>
         ))}
-        
+
         <SkeletonBox className="h-12 w-full rounded-xl" />
         <SkeletonBox className="h-6 w-40 mx-auto" />
       </div>
@@ -312,19 +311,19 @@ export const ProductDetailSkeleton = () => (
       <div className="grid md:grid-cols-2 gap-8">
         {/* Image */}
         <SkeletonBox className="h-96 w-full rounded-2xl" />
-        
+
         {/* Details */}
         <div className="space-y-6">
           <div className="space-y-3">
             <SkeletonBox className="h-8 w-3/4" />
             <SkeletonText lines={3} />
           </div>
-          
+
           <div className="space-y-2">
             <SkeletonBox className="h-4 w-24" />
             <SkeletonBox className="h-12 w-32" />
           </div>
-          
+
           <div className="space-y-2">
             <SkeletonBox className="h-4 w-32" />
             <div className="flex gap-2">
@@ -333,7 +332,7 @@ export const ProductDetailSkeleton = () => (
               ))}
             </div>
           </div>
-          
+
           <SkeletonBox className="h-14 w-full rounded-xl" />
         </div>
       </div>

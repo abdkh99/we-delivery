@@ -1,11 +1,12 @@
 "use client";
-import logo from "/logo.png"
 import Link from "next/link";
+import Image from "next/image";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCart } from "@/contexts/CartContext";
 import { ShoppingCart, User, LogOut, Package, Menu, X } from "lucide-react";
 import NotificationBell from "./NotificationBell";
 import { useState, useEffect } from "react";
+import { Button } from "@mui/material";
 
 export default function Navigation() {
   const { user, profile, signOut } = useAuth();
@@ -50,7 +51,15 @@ export default function Navigation() {
             href="/"
             className="flex items-center flex-shrink-0 gap-2 group"
           >
-            <img className=" max-md:-mr-4" width={"200px"} src="/logo.png" />
+            <Image
+              src="/logo.png"
+              alt="We DELIVER"
+              width={200}
+              height={48}
+              priority
+              className="max-md:-mr-4 h-auto w-[160px] sm:w-[180px] md:w-[200px]"
+              sizes="(max-width: 768px) 160px, 200px"
+            />
           </Link>
 
           {/* Navigation Links (desktop) */}
@@ -125,13 +134,19 @@ export default function Navigation() {
                     )}
                   </Link>
 
-                  <button
+                  <div
                     onClick={handleSignOut}
-                    className="flex items-center space-x-1 text-gray-700 hover:text-red-600 transition-colors"
+                    className="flex items-center space-x-1 text-gray-700 hover:text-red-600 cursor-pointer transition-colors"
                   >
                     <LogOut className="h-4 w-4" />
-                    <span className="text-sm">تسجيل الخروج</span>
-                  </button>
+                    <Button variant="text" sx={{
+                      color: "black",
+                      ":hover": {
+                        color: "red",
+                        transition: "all 0.3s ease-in-out",
+                      }
+                    }}>تسجيل الخروج</Button>
+                  </div>
                 </div>
               </div>
             ) : mounted ? (

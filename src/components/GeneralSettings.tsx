@@ -310,12 +310,6 @@ export default function GeneralSettings() {
                     >
                         {saving ? "جاري الحفظ..." : "حفظ الإعدادات"}
                     </Button>
-
-                    <Alert severity="info" sx={{ borderRadius: 2 }}>
-                        <Typography variant="body2">
-                            <strong>ملاحظة:</strong> التغييرات ستطبق فوراً على الموقع بعد الحفظ.
-                        </Typography>
-                    </Alert>
                 </Stack>
             </CardContent>
         </Card>

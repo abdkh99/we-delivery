@@ -316,12 +316,6 @@ export default function DeliveryFeeSettings() {
                         </Table>
                     </TableContainer>
                 )}
-
-                <Alert severity="info" icon={<InfoIcon />} sx={{ mt: 2, borderRadius: 2 }}>
-                    <Typography variant="body2">
-                        <strong>نصيحة:</strong> لجعل التوصيل مجانياً للطلبات الكبيرة، أضف شريحة برسوم = 0
-                    </Typography>
-                </Alert>
             </CardContent>
 
             {/* Add/Edit Dialog */}

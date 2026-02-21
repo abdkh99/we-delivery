@@ -138,15 +138,15 @@ export async function GET() {
     const avgOrderValue =
       todayOrders && todayOrders.length > 0
         ? todayOrders.reduce((sum, o) => sum + (o.total_price || 0), 0) /
-          todayOrders.length
+        todayOrders.length
         : 0;
 
     // 11. معدل التحويل
     const conversionRate =
       todayOrders && todayOrders.length > 0
         ? (todayOrders.filter((o) => o.status === "delivered").length /
-            todayOrders.length) *
-          100
+          todayOrders.length) *
+        100
         : 0;
 
     // 12. تجميع المنتجات المباعة اليوم
@@ -230,16 +230,16 @@ export async function GET() {
         ordersVsYesterday:
           yesterdayOrders && yesterdayOrders.length > 0
             ? Math.round(
-                (((todayOrders?.length || 0) - yesterdayOrders.length) /
-                  yesterdayOrders.length) *
-                  100
-              )
+              (((todayOrders?.length || 0) - yesterdayOrders.length) /
+                yesterdayOrders.length) *
+              100
+            )
             : 0,
         revenueVsYesterday:
           yesterdayRevenue > 0
             ? Math.round(
-                ((todayRevenue - yesterdayRevenue) / yesterdayRevenue) * 100
-              )
+              ((todayRevenue - yesterdayRevenue) / yesterdayRevenue) * 100
+            )
             : 0,
       },
       topProducts: topProducts || [],

@@ -1,11 +1,14 @@
 // src/app/api/admin/upload-image/route.ts
-// API لرفع صور المنتجات
+// API لرفع صور المنتجات مع ضغط تلقائي إلى WebP
 
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
+import sharp from "sharp";
 
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
 const MAX_SIZE = 5 * 1024 * 1024; // 5MB
+const MAX_WIDTH = 800; // أقصى عرض للصورة
+const WEBP_QUALITY = 80; // جودة WebP (80 ممتازة بصرياً وصغيرة الحجم)
 
 export async function POST(request: Request) {
     try {
@@ -59,19 +62,34 @@ export async function POST(request: Request) {
             );
         }
 
-        // 6. توليد اسم فريد للملف
+        // 6. تحويل الصورة إلى WebP مع ضغط وتصغير
+        const arrayBuffer = await file.arrayBuffer();
+        const inputBuffer = Buffer.from(arrayBuffer);
+
+        const optimizedBuffer = await sharp(inputBuffer)
+            .resize(MAX_WIDTH, MAX_WIDTH, {
+                fit: "inside", // يحافظ على النسب، يصغّر فقط إذا كانت أكبر
+                withoutEnlargement: true, // لا يكبّر الصور الصغيرة
+            })
+            .webp({ quality: WEBP_QUALITY })
+            .toBuffer();
+
+        const originalSizeKB = Math.round(file.size / 1024);
+        const optimizedSizeKB = Math.round(optimizedBuffer.length / 1024);
+        console.log(`📸 Image optimized: ${originalSizeKB}KB → ${optimizedSizeKB}KB (${Math.round((1 - optimizedBuffer.length / file.size) * 100)}% reduction)`);
+
+        // 7. توليد اسم فريد للملف (دائماً .webp)
         const timestamp = Date.now();
         const randomId = Math.random().toString(36).substring(2, 8);
-        const extension = file.name.split(".").pop() || "jpg";
-        const fileName = `product-${timestamp}-${randomId}.${extension}`;
+        const fileName = `product-${timestamp}-${randomId}.webp`;
         const filePath = `products/${fileName}`;
 
-        // 7. رفع الملف إلى Supabase Storage
+        // 8. رفع الملف المحسّن إلى Supabase Storage
         const { data: uploadData, error: uploadError } = await supabase.storage
             .from("product-images")
-            .upload(filePath, file, {
-                contentType: file.type,
-                cacheControl: "3600",
+            .upload(filePath, optimizedBuffer, {
+                contentType: "image/webp",
+                cacheControl: "31536000", // cache لمدة سنة (الاسم فريد)
                 upsert: false,
             });
 
@@ -83,7 +101,7 @@ export async function POST(request: Request) {
             );
         }
 
-        // 8. الحصول على URL العام
+        // 9. الحصول على URL العام
         const {
             data: { publicUrl },
         } = supabase.storage.from("product-images").getPublicUrl(filePath);

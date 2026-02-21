@@ -1,30 +1,54 @@
 import { createClient } from "@/lib/supabase/server";
+import { getServiceSupabaseClient } from "@/lib/supabase/service";
 import { NextResponse } from "next/server";
+
+/**
+ * Helper: verify admin user with the session-based client,
+ * then return a service-role client that bypasses RLS for admin ops.
+ */
+async function getAdminClient() {
+    const supabase = await createClient();
+
+    const {
+        data: { user },
+        error: userError,
+    } = await supabase.auth.getUser();
+
+    if (userError || !user) {
+        return { error: NextResponse.json({ error: "Unauthorized" }, { status: 401 }) };
+    }
+
+    const { data: profile } = await supabase
+        .from("users")
+        .select("role")
+        .eq("id", user.id)
+        .single();
+
+    if (profile?.role !== "admin") {
+        return { error: NextResponse.json({ error: "Forbidden" }, { status: 403 }) };
+    }
+
+    const serviceClient = getServiceSupabaseClient({ required: false });
+    // Fall back to session client if service key isn't configured
+    const client = serviceClient || supabase;
+
+    return { client, error: null };
+}
+
 /**
  * GET: Fetch all delivery fee tiers
  */
 export async function GET() {
     try {
-        const supabase = await createClient();
-        const {
-            data: { user },
-            error: userError,
-        } = await supabase.auth.getUser();
-        if (userError || !user) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-        }
-        const { data: profile } = await supabase
-            .from("users")
-            .select("role")
-            .eq("id", user.id)
-            .single();
-        if (profile?.role !== "admin") {
-            return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-        }
-        const { data: tiers, error } = await supabase
+        const result = await getAdminClient();
+        if (result.error) return result.error;
+        const client = result.client!;
+
+        const { data: tiers, error } = await client
             .from("delivery_fee_tiers")
             .select("*")
             .order("min_order_amount", { ascending: true });
+
         if (error) {
             console.error("Error fetching delivery fee tiers:", error);
             return NextResponse.json(
@@ -32,6 +56,7 @@ export async function GET() {
                 { status: 500 }
             );
         }
+
         return NextResponse.json({ tiers });
     } catch (error) {
         console.error("Error in delivery fee tiers API:", error);
@@ -41,27 +66,16 @@ export async function GET() {
         );
     }
 }
+
 /**
  * POST: Create new delivery fee tier
  */
 export async function POST(request: Request) {
     try {
-        const supabase = await createClient();
-        const {
-            data: { user },
-            error: userError,
-        } = await supabase.auth.getUser();
-        if (userError || !user) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-        }
-        const { data: profile } = await supabase
-            .from("users")
-            .select("role")
-            .eq("id", user.id)
-            .single();
-        if (profile?.role !== "admin") {
-            return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-        }
+        const result = await getAdminClient();
+        if (result.error) return result.error;
+        const client = result.client!;
+
         const body = await request.json();
         const {
             min_order_amount,
@@ -69,6 +83,7 @@ export async function POST(request: Request) {
             delivery_fee,
             is_active,
         } = body;
+
         if (
             typeof min_order_amount !== "number" ||
             typeof delivery_fee !== "number"
@@ -78,7 +93,8 @@ export async function POST(request: Request) {
                 { status: 400 }
             );
         }
-        const { data: tier, error } = await supabase
+
+        const { data: tier, error } = await client
             .from("delivery_fee_tiers")
             .insert({
                 min_order_amount,
@@ -88,6 +104,7 @@ export async function POST(request: Request) {
             })
             .select()
             .single();
+
         if (error) {
             console.error("Error creating delivery fee tier:", error);
             return NextResponse.json(
@@ -95,6 +112,7 @@ export async function POST(request: Request) {
                 { status: 500 }
             );
         }
+
         return NextResponse.json({ tier }, { status: 201 });
     } catch (error) {
         console.error("Error in delivery fee tiers POST:", error);
@@ -104,27 +122,16 @@ export async function POST(request: Request) {
         );
     }
 }
+
 /**
  * PATCH: Update delivery fee tier
  */
 export async function PATCH(request: Request) {
     try {
-        const supabase = await createClient();
-        const {
-            data: { user },
-            error: userError,
-        } = await supabase.auth.getUser();
-        if (userError || !user) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-        }
-        const { data: profile } = await supabase
-            .from("users")
-            .select("role")
-            .eq("id", user.id)
-            .single();
-        if (profile?.role !== "admin") {
-            return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-        }
+        const result = await getAdminClient();
+        if (result.error) return result.error;
+        const client = result.client!;
+
         const body = await request.json();
         const {
             id,
@@ -133,12 +140,14 @@ export async function PATCH(request: Request) {
             delivery_fee,
             is_active,
         } = body;
+
         if (!id) {
             return NextResponse.json(
                 { error: "Tier ID is required" },
                 { status: 400 }
             );
         }
+
         const updateData: {
             min_order_amount?: number;
             max_order_amount?: number | null;
@@ -152,12 +161,14 @@ export async function PATCH(request: Request) {
         if (typeof delivery_fee === "number")
             updateData.delivery_fee = delivery_fee;
         if (typeof is_active === "boolean") updateData.is_active = is_active;
-        const { data: tier, error } = await supabase
+
+        const { data: tier, error } = await client
             .from("delivery_fee_tiers")
             .update(updateData)
             .eq("id", id)
             .select()
             .single();
+
         if (error) {
             console.error("Error updating delivery fee tier:", error);
             return NextResponse.json(
@@ -165,6 +176,7 @@ export async function PATCH(request: Request) {
                 { status: 500 }
             );
         }
+
         return NextResponse.json({ tier });
     } catch (error) {
         console.error("Error in delivery fee tiers PATCH:", error);
@@ -174,39 +186,33 @@ export async function PATCH(request: Request) {
         );
     }
 }
+
 /**
  * DELETE: Delete delivery fee tier
  */
 export async function DELETE(request: Request) {
     try {
-        const supabase = await createClient();
-        const {
-            data: { user },
-            error: userError,
-        } = await supabase.auth.getUser();
-        if (userError || !user) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-        }
-        const { data: profile } = await supabase
-            .from("users")
-            .select("role")
-            .eq("id", user.id)
-            .single();
-        if (profile?.role !== "admin") {
-            return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-        }
+        const result = await getAdminClient();
+        if (result.error) return result.error;
+        const client = result.client!;
+
         const { searchParams } = new URL(request.url);
         const id = searchParams.get("id");
+
         if (!id) {
             return NextResponse.json(
                 { error: "Tier ID is required" },
                 { status: 400 }
             );
         }
-        const { error } = await supabase
+
+        // Use select to verify deletion
+        const { data: deleted, error } = await client
             .from("delivery_fee_tiers")
             .delete()
-            .eq("id", id);
+            .eq("id", id)
+            .select();
+
         if (error) {
             console.error("Error deleting delivery fee tier:", error);
             return NextResponse.json(
@@ -214,6 +220,14 @@ export async function DELETE(request: Request) {
                 { status: 500 }
             );
         }
+
+        if (!deleted || deleted.length === 0) {
+            return NextResponse.json(
+                { error: "Tier not found or already deleted" },
+                { status: 404 }
+            );
+        }
+
         return NextResponse.json({ success: true });
     } catch (error) {
         console.error("Error in delivery fee tiers DELETE:", error);

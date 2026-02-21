@@ -1,33 +1,50 @@
 import { createClient } from "@/lib/supabase/server";
+import { getServiceSupabaseClient } from "@/lib/supabase/service";
 import { NextResponse } from "next/server";
+
+/**
+ * Helper: verify admin user with the session-based client,
+ * then return a service-role client that bypasses RLS for admin ops.
+ */
+async function getAdminClient() {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError || !user) {
+    return { error: NextResponse.json({ error: "Unauthorized" }, { status: 401 }) };
+  }
+
+  const { data: profile } = await supabase
+    .from("users")
+    .select("role")
+    .eq("id", user.id)
+    .single();
+
+  if (profile?.role !== "admin") {
+    return { error: NextResponse.json({ error: "Forbidden" }, { status: 403 }) };
+  }
+
+  const serviceClient = getServiceSupabaseClient({ required: false });
+  // Fall back to session client if service key isn't configured
+  const client = serviceClient || supabase;
+
+  return { client, error: null };
+}
 
 /**
  * GET: Fetch all commission settings
  */
 export async function GET() {
   try {
-    const supabase = await createClient();
+    const result = await getAdminClient();
+    if (result.error) return result.error;
+    const client = result.client!;
 
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
-
-    if (userError || !user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const { data: profile } = await supabase
-      .from("users")
-      .select("role")
-      .eq("id", user.id)
-      .single();
-
-    if (profile?.role !== "admin") {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
-
-    const { data: settings, error } = await supabase
+    const { data: settings, error } = await client
       .from("commission_settings")
       .select("*")
       .order("min_order_amount", { ascending: true });
@@ -55,26 +72,9 @@ export async function GET() {
  */
 export async function POST(request: Request) {
   try {
-    const supabase = await createClient();
-
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
-
-    if (userError || !user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const { data: profile } = await supabase
-      .from("users")
-      .select("role")
-      .eq("id", user.id)
-      .single();
-
-    if (profile?.role !== "admin") {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
+    const result = await getAdminClient();
+    if (result.error) return result.error;
+    const client = result.client!;
 
     const body = await request.json();
     const {
@@ -94,7 +94,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const { data: setting, error } = await supabase
+    const { data: setting, error } = await client
       .from("commission_settings")
       .insert({
         min_order_amount,
@@ -128,26 +128,9 @@ export async function POST(request: Request) {
  */
 export async function PATCH(request: Request) {
   try {
-    const supabase = await createClient();
-
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
-
-    if (userError || !user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const { data: profile } = await supabase
-      .from("users")
-      .select("role")
-      .eq("id", user.id)
-      .single();
-
-    if (profile?.role !== "admin") {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
+    const result = await getAdminClient();
+    if (result.error) return result.error;
+    const client = result.client!;
 
     const body = await request.json();
     const {
@@ -179,7 +162,7 @@ export async function PATCH(request: Request) {
       updateData.commission_percentage = commission_percentage;
     if (typeof is_active === "boolean") updateData.is_active = is_active;
 
-    const { data: setting, error } = await supabase
+    const { data: setting, error } = await client
       .from("commission_settings")
       .update(updateData)
       .eq("id", id)
@@ -209,26 +192,9 @@ export async function PATCH(request: Request) {
  */
 export async function DELETE(request: Request) {
   try {
-    const supabase = await createClient();
-
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
-
-    if (userError || !user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const { data: profile } = await supabase
-      .from("users")
-      .select("role")
-      .eq("id", user.id)
-      .single();
-
-    if (profile?.role !== "admin") {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
+    const result = await getAdminClient();
+    if (result.error) return result.error;
+    const client = result.client!;
 
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id");
@@ -240,16 +206,25 @@ export async function DELETE(request: Request) {
       );
     }
 
-    const { error } = await supabase
+    // Use select() to verify a row was actually deleted
+    const { data: deleted, error } = await client
       .from("commission_settings")
       .delete()
-      .eq("id", id);
+      .eq("id", id)
+      .select();
 
     if (error) {
       console.error("Error deleting commission setting:", error);
       return NextResponse.json(
         { error: "Failed to delete setting" },
         { status: 500 }
+      );
+    }
+
+    if (!deleted || deleted.length === 0) {
+      return NextResponse.json(
+        { error: "Setting not found or already deleted" },
+        { status: 404 }
       );
     }
 

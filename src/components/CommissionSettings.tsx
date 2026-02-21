@@ -196,7 +196,7 @@ export default function CommissionSettings() {
           </Box>
         }
         title={
-          <Typography variant="h6" fontWeight="bold" color="text.primary">
+          <Typography variant="h1" fontWeight="bold" color="text.primary">
             إعدادات عمولة المنصة
           </Typography>
         }

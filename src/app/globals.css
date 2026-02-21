@@ -5,14 +5,17 @@
   --background: #ffffff;
   --foreground: #1a1a1a;
   /* Brand Colors - نظام ألوان احترافي */
-  --primary: #2563eb; /* أزرق احترافي */
+  --primary: #2563eb;
+  /* أزرق احترافي */
   --primary-dark: #1e40af;
   --primary-light: #3b82f6;
-  --secondary: #10b981; /* أخضر للنجاح */
-  --accent: #8b5cf6; /* بنفسجي للتميز */
+  --secondary: #10b981;
+  /* أخضر للنجاح */
+  --accent: #8b5cf6;
+  /* بنفسجي للتميز */
   --warning: #f59e0b;
   --error: #ef4444;
-  
+
   /* Neutral Colors */
   --gray-50: #f9fafb;
   --gray-100: #f3f4f6;
@@ -57,6 +60,7 @@ body {
     opacity: 0;
     transform: translateY(10px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -94,6 +98,7 @@ body {
   0% {
     background-position: 200% 0;
   }
+
   100% {
     background-position: -200% 0;
   }
@@ -109,6 +114,7 @@ body {
     opacity: 0;
     transform: translateY(10px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -121,9 +127,12 @@ body {
 
 /* Pulse Animation محسن - نبض أكثر سلاسة */
 @keyframes pulse-smooth {
-  0%, 100% {
+
+  0%,
+  100% {
     opacity: 1;
   }
+
   50% {
     opacity: 0.7;
   }
@@ -135,9 +144,12 @@ body {
 
 /* Scale Animation - تكبير وتصغير سلس */
 @keyframes scale-pulse {
-  0%, 100% {
+
+  0%,
+  100% {
     transform: scale(1);
   }
+
   50% {
     transform: scale(1.02);
   }
@@ -152,6 +164,7 @@ body {
   0% {
     transform: translateX(-100%);
   }
+
   100% {
     transform: translateX(100%);
   }
@@ -162,36 +175,81 @@ body {
 }
 
 /* Animation Delay Classes - لتجنب hydration errors */
-.animate-delay-100 { animation-delay: 0.1s; }
-.animate-delay-150 { animation-delay: 0.15s; }
-.animate-delay-200 { animation-delay: 0.2s; }
-.animate-delay-250 { animation-delay: 0.25s; }
-.animate-delay-300 { animation-delay: 0.3s; }
+.animate-delay-100 {
+  animation-delay: 0.1s;
+}
+
+.animate-delay-150 {
+  animation-delay: 0.15s;
+}
+
+.animate-delay-200 {
+  animation-delay: 0.2s;
+}
+
+.animate-delay-250 {
+  animation-delay: 0.25s;
+}
+
+.animate-delay-300 {
+  animation-delay: 0.3s;
+}
 
 /* Grid Item Delays */
-.animate-delay-0 { animation-delay: 0s; }
-.animate-delay-50 { animation-delay: 0.05s; }
-.animate-delay-100 { animation-delay: 0.1s; }
-.animate-delay-150 { animation-delay: 0.15s; }
-.animate-delay-200 { animation-delay: 0.2s; }
-.animate-delay-250 { animation-delay: 0.25s; }
-.animate-delay-300 { animation-delay: 0.3s; }
-.animate-delay-350 { animation-delay: 0.35s; }
-.animate-delay-400 { animation-delay: 0.4s; }
+.animate-delay-0 {
+  animation-delay: 0s;
+}
+
+.animate-delay-50 {
+  animation-delay: 0.05s;
+}
+
+.animate-delay-100 {
+  animation-delay: 0.1s;
+}
+
+.animate-delay-150 {
+  animation-delay: 0.15s;
+}
+
+.animate-delay-200 {
+  animation-delay: 0.2s;
+}
+
+.animate-delay-250 {
+  animation-delay: 0.25s;
+}
+
+.animate-delay-300 {
+  animation-delay: 0.3s;
+}
+
+.animate-delay-350 {
+  animation-delay: 0.35s;
+}
+
+.animate-delay-400 {
+  animation-delay: 0.4s;
+}
 
 /* ✨ Login Page Animations - أنيميشن صفحة تسجيل الدخول */
 
 /* Blob Animation - خلفية متحركة */
 @keyframes blob {
-  0%, 100% {
+
+  0%,
+  100% {
     transform: translate(0, 0) scale(1);
   }
+
   25% {
     transform: translate(20px, -20px) scale(1.1);
   }
+
   50% {
     transform: translate(-20px, 20px) scale(0.9);
   }
+
   75% {
     transform: translate(20px, 20px) scale(1.05);
   }
@@ -211,13 +269,24 @@ body {
 
 /* Shake Animation - اهتزاز للأخطاء */
 @keyframes shake {
-  0%, 100% {
+
+  0%,
+  100% {
     transform: translateX(0);
   }
-  10%, 30%, 50%, 70%, 90% {
+
+  10%,
+  30%,
+  50%,
+  70%,
+  90% {
     transform: translateX(-5px);
   }
-  20%, 40%, 60%, 80% {
+
+  20%,
+  40%,
+  60%,
+  80% {
     transform: translateX(5px);
   }
 }
@@ -228,9 +297,12 @@ body {
 
 /* Gradient Animation - تدرج متحرك */
 @keyframes gradient-shift {
-  0%, 100% {
+
+  0%,
+  100% {
     background-position: 0% 50%;
   }
+
   50% {
     background-position: 100% 50%;
   }
@@ -239,4 +311,21 @@ body {
 .animate-gradient {
   background-size: 200% 200%;
   animation: gradient-shift 3s ease infinite;
+}
+
+/* Ripple Effect - تأثير موجة عند الضغط */
+@keyframes ripple-effect {
+  0% {
+    transform: scale(0);
+    opacity: 0.6;
+  }
+
+  100% {
+    transform: scale(8);
+    opacity: 0;
+  }
+}
+
+.animate-ripple {
+  animation: ripple-effect 0.6s linear;
 }

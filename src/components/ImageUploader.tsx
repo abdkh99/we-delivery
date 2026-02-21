@@ -85,7 +85,7 @@ export default function ImageUploader({
         if (file) {
             uploadFile(file);
         }
-    }, []);
+    }, [uploadFile]);
 
     const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -94,7 +94,8 @@ export default function ImageUploader({
         }
     };
 
-    const handleRemove = () => {
+    const handleRemove = (e: React.MouseEvent) => {
+        e.preventDefault();
         setPreview(null);
         onChange("");
         if (fileInputRef.current) {
@@ -102,7 +103,8 @@ export default function ImageUploader({
         }
     };
 
-    const handleClick = () => {
+    const handleClick = (e: React.MouseEvent) => {
+        e.preventDefault();
         fileInputRef.current?.click();
     };
 
@@ -123,6 +125,8 @@ export default function ImageUploader({
                         <img
                             src={preview}
                             alt="معاينة"
+                            width={1280}
+                            height={720}
                             className="w-full h-full object-cover"
                         />
                     </div>

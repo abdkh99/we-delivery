@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import GPSLocationPicker from "./GPSLocationPicker";
 import AddressForm from "./AddressForm";
+import ConfirmationModal from "./ConfirmationModal";
 import { useAuth } from "@/contexts/AuthContext";
 
 interface SavedAddress {
@@ -39,7 +40,7 @@ interface AddressStepProps {
     address_details: string;
     contact_phone?: string;
     label: string;
-  }) => void;
+  } | null) => void;
   selectedAddressId?: string;
   className?: string;
 }
@@ -71,6 +72,11 @@ export default function AddressStep({
   const [internalSelectedAddressId, setInternalSelectedAddressId] = useState<string | null>(
     null
   );
+
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [addressToDelete, setAddressToDelete] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
 
   // Load saved addresses
   useEffect(() => {
@@ -223,26 +229,39 @@ export default function AddressStep({
     }
   };
 
-  const handleDeleteAddress = async (addressId: string, e: React.MouseEvent) => {
+  const handleDeleteClick = (addressId: string, e: React.MouseEvent) => {
     e.stopPropagation();
+    setAddressToDelete(addressId);
+    setDeleteModalOpen(true);
+  };
 
-    if (!confirm("هل أنت متأكد من حذف هذا العنوان؟")) {
-      return;
-    }
+  const confirmDelete = async () => {
+    if (!addressToDelete) return;
 
+    setDeleting(true);
     try {
-      const response = await fetch(`/api/addresses/${addressId}`, {
+      const response = await fetch(`/api/addresses/${addressToDelete}`, {
         method: "DELETE",
       });
 
       if (response.ok) {
+        // Clear selection if the deleted address was selected
+        if (addressToDelete === internalSelectedAddressId || addressToDelete === selectedAddressId) {
+          setInternalSelectedAddressId(null);
+          onAddressSelected(null);
+        }
+
         await loadSavedAddresses();
+        setDeleteModalOpen(false);
+        setAddressToDelete(null);
       } else {
         throw new Error("Failed to delete address");
       }
     } catch (error) {
       console.error("Error deleting address:", error);
       alert("فشل في حذف العنوان");
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -300,7 +319,7 @@ export default function AddressStep({
               العناوين المحفوظة ({savedAddresses.length}):
             </h4>
             {/* 🔥 FIX: Mobile-optimized grid layout */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
+            <div className="grid grid-cols-1 gap-2 sm:gap-3">
               {savedAddresses.map((address) => {
                 const isSelected = internalSelectedAddressId === address.id || selectedAddressId === address.id;
 
@@ -348,8 +367,8 @@ export default function AddressStep({
                             <div className="flex items-center gap-1 mt-0.5 sm:mt-1 flex-wrap justify-end">
                               {address.is_default && (
                                 <span className={`text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 rounded-full font-medium whitespace-nowrap ${isSelected
-                                    ? 'bg-white/30 text-white'
-                                    : 'bg-white/80 text-blue-700'
+                                  ? 'bg-white/30 text-white'
+                                  : 'bg-white/80 text-blue-700'
                                   }`}>
                                   ⭐ افتراضي
                                 </span>
@@ -403,10 +422,10 @@ export default function AddressStep({
 
                       {/* Delete Button - Mobile Optimized */}
                       <button
-                        onClick={(e) => handleDeleteAddress(address.id, e)}
+                        onClick={(e) => handleDeleteClick(address.id, e)}
                         className={`p-1.5 sm:p-2 rounded-lg transition-colors flex-shrink-0 ${isSelected
-                            ? 'text-white hover:bg-white/20 active:bg-white/30'
-                            : 'text-red-600 hover:bg-red-100 active:bg-red-200'
+                          ? 'text-white hover:bg-white/20 active:bg-white/30'
+                          : 'text-red-600 hover:bg-red-100 active:bg-red-200'
                           }`}
                         title="حذف العنوان"
                         aria-label="حذف العنوان"
@@ -435,6 +454,18 @@ export default function AddressStep({
           <span>إضافة عنوان جديد</span>
         </button>
 
+        {/* Confirmation Modal */}
+        <ConfirmationModal
+          isOpen={deleteModalOpen}
+          onClose={() => setDeleteModalOpen(false)}
+          onConfirm={confirmDelete}
+          title="حذف العنوان"
+          description="هل أنت متأكد أنك تريد حذف هذا العنوان؟ لا يمكن التراجع عن هذا الإجراء."
+          confirmText="حذف"
+          cancelText="إلغاء"
+          variant="danger"
+          isLoading={deleting}
+        />
       </div>
     );
   }

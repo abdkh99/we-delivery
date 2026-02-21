@@ -1,34 +1,40 @@
-import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { NextResponse } from "next/server";
 
 /**
- * API endpoint to refresh user session
- * Used by fetcher when encountering 401 errors
+ * Refresh Supabase session cookies.
+ *
+ * Used by `src/lib/fetcher.ts` when a request returns 401.
+ * If the access token is expired but a refresh token is present in cookies,
+ * calling `getUser()` will trigger a refresh and update cookies via `@supabase/ssr`.
  */
-export async function POST(request: Request) {
+export async function POST() {
   try {
     const supabase = await createClient();
 
-    const { data, error } = await supabase.auth.refreshSession();
+    const {
+      data: { user },
+      error,
+    } = await supabase.auth.getUser();
 
-    if (error || !data.session) {
+    if (error || !user) {
       return NextResponse.json(
-        { error: "فشل تحديث الجلسة", message: error?.message },
+        { success: false, error: "Unauthorized" },
         { status: 401 }
       );
     }
 
-    return NextResponse.json({
-      success: true,
-      session: {
-        access_token: data.session.access_token,
-        expires_at: data.session.expires_at,
-      },
-    });
-  } catch (error) {
-    console.error("Session refresh error:", error);
     return NextResponse.json(
-      { error: "حدث خطأ أثناء تحديث الجلسة" },
+      { success: true },
+      {
+        headers: {
+          "Cache-Control": "no-store",
+        },
+      }
+    );
+  } catch (e) {
+    return NextResponse.json(
+      { success: false, error: "Internal server error" },
       { status: 500 }
     );
   }

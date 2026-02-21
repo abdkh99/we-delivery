@@ -4,7 +4,7 @@ import { createBrowserClient } from "@supabase/ssr";
  * Enhanced fetch with timeout for slow connections
  */
 function createFetchWithTimeout(timeout: number = 30000) {
-  return async (url: string, options: RequestInit = {}) => {
+  return async (url: RequestInfo | URL, options: RequestInit = {}) => {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeout);
 
@@ -49,7 +49,7 @@ export function createClient() {
           }),
         signOut: () => Promise.resolve({ error: null }),
         onAuthStateChange: () => ({
-          data: { subscription: { unsubscribe: () => {} } },
+          data: { subscription: { unsubscribe: () => { } } },
         }),
         exchangeCodeForSession: () =>
           Promise.resolve({

@@ -3,6 +3,7 @@ import { Cairo } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { CartProvider } from "@/contexts/CartContext";
+import { FavoritesProvider } from "@/contexts/FavoritesContext";
 import { Toaster } from "sonner";
 
 const cairo = Cairo({
@@ -33,7 +34,9 @@ export default function RootLayout({
       <body className={`${cairo.variable} antialiased overflow-x-hidden`}>
         <AuthProvider>
           <CartProvider>
-            {children}
+            <FavoritesProvider>
+              {children}
+            </FavoritesProvider>
             <Toaster
               position="top-center"
               toastOptions={

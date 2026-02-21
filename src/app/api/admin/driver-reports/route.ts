@@ -64,6 +64,7 @@ export async function GET() {
         orders:order_id (
           id,
           total_price,
+          platform_commission,
           address_text,
           lat,
           lng,
@@ -86,32 +87,35 @@ export async function GET() {
     }
 
     // تجميع البيانات حسب السائق
-    const driverReports = drivers?.map((driver) => {
+    const driverReports = drivers?.map((driver: { id: any; users: any; active: any; region: any; }) => {
       const driverDeliveries = deliveries?.filter(
-        (d) => d.driver_id === driver.id
+        (d: { driver_id: any; }) => d.driver_id === driver.id
       ) || [];
 
       const stats = {
         total: driverDeliveries.length,
-        completed: driverDeliveries.filter((d) => d.status === "delivered").length,
-        inProgress: driverDeliveries.filter((d) => d.status === "on_way").length,
-        assigned: driverDeliveries.filter((d) => d.status === "assigned").length,
-        failed: driverDeliveries.filter((d) => d.status === "failed").length,
-        cancelled: driverDeliveries.filter((d) => d.status === "cancelled").length,
+        completed: driverDeliveries.filter((d: { status: string; }) => d.status === "delivered").length,
+        inProgress: driverDeliveries.filter((d: { status: string; }) => d.status === "on_way").length,
+        assigned: driverDeliveries.filter((d: { status: string; }) => d.status === "assigned").length,
+        failed: driverDeliveries.filter((d: { status: string; }) => d.status === "failed").length,
+        cancelled: driverDeliveries.filter((d: { status: string; }) => d.status === "cancelled").length,
       };
 
-      // إجمالي الإيرادات من الطلبات المكتملة
+      // إجمالي إيراد السائق من الطلبات المكتملة (بعد خصم عمولة المنصة)
       const revenue = driverDeliveries
-        .filter((d) => d.status === "delivered" && d.orders)
-        .reduce((sum, d) => {
+        .filter((d: { status: string; orders: any; }) => d.status === "delivered" && d.orders)
+        .reduce((sum: any, d: { orders: any; }) => {
           const order = d.orders as any;
-          return sum + (order?.total_price || 0);
+          const total = order?.total_price || 0;
+          const platformCommission = order?.platform_commission || 0;
+          const driverShare = Math.max(0, total - platformCommission);
+          return sum + driverShare;
         }, 0);
 
       // آخر 10 توصيلات
       const recentDeliveries = driverDeliveries
         .slice(0, 10)
-        .map((d) => ({
+        .map((d: { id: any; status: any; started_at: any; delivered_at: any; created_at: any; orders: any; }) => ({
           id: d.id,
           status: d.status,
           started_at: d.started_at,
@@ -119,13 +123,13 @@ export async function GET() {
           created_at: d.created_at,
           order: d.orders
             ? {
-                id: (d.orders as any).id,
-                customer_name: (d.orders as any).users?.name || "غير محدد",
-                customer_phone: (d.orders as any).users?.phone || null,
-                address: (d.orders as any).address_text,
-                total_price: (d.orders as any).total_price,
-                created_at: (d.orders as any).created_at,
-              }
+              id: (d.orders as any).id,
+              customer_name: (d.orders as any).users?.name || "غير محدد",
+              customer_phone: (d.orders as any).users?.phone || null,
+              address: (d.orders as any).address_text,
+              total_price: (d.orders as any).total_price,
+              created_at: (d.orders as any).created_at,
+            }
             : null,
         }));
 

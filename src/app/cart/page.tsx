@@ -1,16 +1,15 @@
 "use client";
+
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { mutate } from "swr";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
+import Image from "next/image";
 import Navigation from "@/components/Navigation";
 import { useCart } from "@/contexts/CartContext";
 import { useAuth } from "@/contexts/AuthContext";
-import {
-  formatCurrency,
-  calculatePlatformCommission,
-} from "@/lib/utils";
+import { formatCurrency, calculatePlatformCommission } from "@/lib/utils";
 import { getCategoryArabic } from "@/lib/translations";
 import {
   Package,
@@ -21,18 +20,22 @@ import {
   CheckCircle,
   AlertCircle,
   Coins,
-  DollarSign,
-  MapPin,
 } from "lucide-react";
 import { toast } from "sonner";
-import LoadingSpinner from "@/components/LoadingSpinner";
 import { CartSkeleton } from "@/components/CartSkeleton";
+
 const AddressStepDynamic = dynamic(() => import("@/components/AddressStep"), {
   ssr: false,
   loading: () => (
-    <div className="animate-pulse bg-gray-200 h-64 rounded-lg"></div>
+    <div className="animate-pulse bg-gray-100 h-64 rounded-lg"></div>
   ),
 });
+
+type CommissionSetting = {
+  min_order_amount: number;
+  max_order_amount: number | null;
+  commission_percentage: number;
+};
 
 export default function CartPage() {
   const { user } = useAuth();
@@ -47,7 +50,6 @@ export default function CartPage() {
     getCashNeeded,
     getDeliveryFee,
   } = useCart();
-
   const router = useRouter();
   const [selectedAddress, setSelectedAddress] = useState<{
     id?: string;
@@ -64,9 +66,37 @@ export default function CartPage() {
   const [userPoints, setUserPoints] = useState(0);
   const [loadingPoints, setLoadingPoints] = useState(true);
 
+  // 🔹 إعدادات العمولة الديناميكية من لوحة التحكم
+  const [commissionSettings, setCommissionSettings] = useState<
+    CommissionSetting[] | null
+  >(null);
+
   const totalPrice = getTotalPrice();
   const deliveryFee = getDeliveryFee();
-  const platformCommission = calculatePlatformCommission(totalPrice);
+
+  // نحاول أولاً استخدام إعدادات العمولة من القاعدة، وإذا لم تتوفر نرجع للحساب القديم
+  const platformCommission = (() => {
+    if (!commissionSettings || commissionSettings.length === 0) {
+      return calculatePlatformCommission(totalPrice);
+    }
+
+    // نفس منطق الـ checkout backend تقريباً
+    for (const setting of commissionSettings) {
+      const min = Number(setting.min_order_amount) || 0;
+      const max =
+        setting.max_order_amount === null
+          ? Infinity
+          : Number(setting.max_order_amount);
+
+      if (totalPrice >= min && totalPrice < max) {
+        const rate = Number(setting.commission_percentage) / 100;
+        return Math.round(totalPrice * rate);
+      }
+    }
+
+    // في حال لم تطابق أي شريحة، نرجع للحساب الافتراضي
+    return calculatePlatformCommission(totalPrice);
+  })();
 
   const pointsNeeded = getPointsNeeded();
   const cashNeeded = getCashNeeded() + deliveryFee + platformCommission;
@@ -77,7 +107,6 @@ export default function CartPage() {
         setLoadingPoints(false);
         return;
       }
-
       try {
         const response = await fetch("/api/user/profile");
         if (response.ok) {
@@ -93,9 +122,25 @@ export default function CartPage() {
         setLoadingPoints(false);
       }
     };
-
     fetchUserPoints();
   }, [user]);
+
+  // جلب إعدادات العمولة العامة (لإظهارها في السلة كما في الـ checkout)
+  useEffect(() => {
+    const fetchCommissionSettings = async () => {
+      try {
+        const response = await fetch("/api/settings/commission");
+        if (!response.ok) return;
+
+        const data = await response.json();
+        setCommissionSettings(data.settings || []);
+      } catch (error) {
+        console.error("Failed to fetch commission settings for cart:", error);
+      }
+    };
+
+    fetchCommissionSettings();
+  }, []);
 
   const handleCheckout = async () => {
     if (!user) {
@@ -138,8 +183,8 @@ export default function CartPage() {
     // ==========================================
     // 🔥 FIX: Removed frontend validation - let backend handle it
     // ==========================================
-    setIsProcessing(true);
 
+    setIsProcessing(true);
     console.log("🚀 Starting Checkout...");
 
     // Build full address string
@@ -151,6 +196,7 @@ export default function CartPage() {
     ]
       .filter(Boolean)
       .join(", ");
+
     const checkoutData = {
       items: items.map((item) => {
         // 🔥 FIX: Enhanced product ID resolution
@@ -158,12 +204,12 @@ export default function CartPage() {
         // If masterProductId is missing but we have variantId, we'll let the backend handle it
         // For regular products: use product.id
         let productId = item.product.id;
-        let masterProductId = item.masterProductId;
+        const masterProductId = item.masterProductId;
 
         // If this item has a variant but no masterProductId, try to infer it
         // Note: This is a fallback - ideally masterProductId should always be set when adding to cart
         if (item.variantId && !masterProductId) {
-          // If product.id looks like it might be a variant ID (UUID format), 
+          // If product.id looks like it might be a variant ID (UUID format),
           // we'll let the backend handle the lookup
           console.warn(`⚠️ Item missing masterProductId:`, {
             productId: item.product.id,
@@ -176,6 +222,7 @@ export default function CartPage() {
         if (masterProductId) {
           productId = masterProductId;
         }
+
         return {
           product: {
             id: productId,
@@ -195,8 +242,11 @@ export default function CartPage() {
       deliveryLng: Number(selectedAddress.lng),
       notes: selectedAddress.address_details || "",
     };
+
     console.log("📦 Checkout Data:", JSON.stringify(checkoutData, null, 2));
+
     const toastId = toast.loading("جاري معالجة طلبك...");
+
     try {
       const response = await fetch("/api/checkout", {
         method: "POST",
@@ -205,12 +255,15 @@ export default function CartPage() {
         },
         body: JSON.stringify(checkoutData),
       });
+
       const data = await response.json();
+
       console.log("📥 API Response:", {
         status: response.status,
         ok: response.ok,
         data: data,
       });
+
       if (!response.ok) {
         console.error("❌ Checkout Failed:", data);
         toast.error("فشل إتمام الطلب", {
@@ -222,6 +275,7 @@ export default function CartPage() {
         });
         return;
       }
+
       if (data.success && data.order) {
         console.log("✅ Order created successfully:", data.order.id);
         mutate("/api/products"); // ✅ Update stock cache
@@ -254,127 +308,141 @@ export default function CartPage() {
       setIsProcessing(false);
     }
   };
+
   // Show skeleton while loading points
   if (loadingPoints && user) {
     return <CartSkeleton />;
   }
+
   if (items.length === 0) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-purple-50">
+      <div className="min-h-screen bg-[#f0f3f4]">
         <Navigation />
-        <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8 py-4 sm:py-6 lg:py-8">
-          <div className="text-center py-8 sm:py-12">
-            <ShoppingBag className="mx-auto h-16 w-16 sm:h-20 sm:w-20 text-gray-500" />
-            <h3 className="mt-4 text-base sm:text-lg font-medium text-gray-900">
-              سلة التسوق فارغة
-            </h3>
-            <p className="mt-2 text-sm sm:text-base text-gray-600 max-w-sm mx-auto">
-              ابدأ بإضافة بعض المنتجات إلى سلة التسوق
-            </p>
-            <Link
-              href="/products"
-              className="mt-4 sm:mt-6 inline-flex items-center px-4 sm:px-6 py-2 sm:py-3 border border-transparent text-sm sm:text-base font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 transition-colors"
-            >
-              تصفح المنتجات
-            </Link>
-          </div>
+        <div className="max-w-7xl mx-auto px-4 py-12 text-center">
+          <ShoppingBag className="mx-auto h-20 w-20 text-gray-300" />
+          <h3 className="mt-4 text-xl font-bold text-[#0f1419]">
+            سلة التسوق فارغة
+          </h3>
+          <p className="mt-2 text-gray-500">
+            ابدأ بإضافة بعض المنتجات إلى سلة التسوق
+          </p>
+          <Link
+            href="/products"
+            className="mt-6 inline-flex items-center px-6 py-3 rounded-full text-white bg-[#1c9cf0] hover:opacity-90 transition-opacity font-bold"
+          >
+            تصفح المنتجات
+          </Link>
         </div>
       </div>
     );
   }
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-purple-50">
+    <div className="min-h-screen bg-[#f0f3f4] text-[#0f1419]">
       <Navigation />
-      <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8 py-4 sm:py-6 lg:py-8">
-        <div className="mb-4 sm:mb-6 lg:mb-8">
-          <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">
-            سلة التسوق
-          </h1>
-          <p className="text-sm sm:text-base text-gray-600 mt-1">
-            راجع طلبك قبل الإتمام
-          </p>
+      <div className="max-w-7xl mx-auto px-4 py-8">
+        <div className="mb-8">
+          <h1 className="text-2xl font-bold">سلة التسوق</h1>
+          <p className="text-gray-500">راجع طلبك قبل الإتمام</p>
         </div>
-        <div className="grid lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
+
+        <div className="grid lg:grid-cols-3 gap-8">
           {/* Products Section */}
-          <div className="lg:col-span-2 space-y-4 sm:space-y-6">
-            <div className="bg-white rounded-xl shadow-xl border-2 border-gray-200 overflow-hidden">
-              <div className="px-4 sm:px-6 py-4 sm:py-5 border-b-2 border-gray-200 bg-gradient-to-r from-blue-100 to-indigo-100">
-                <h2 className="text-lg sm:text-xl font-black text-gray-900 flex items-center gap-2">
-                  <ShoppingBag className="h-5 w-5 sm:h-6 sm:w-6 text-blue-700" />
-                  <span>المنتجات في السلة ({items.length})</span>
+          <div className="lg:col-span-2 space-y-6">
+            <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
+              <div className="px-6 py-4 border-b border-gray-100 bg-white">
+                <h2 className="text-lg font-bold flex items-center gap-2">
+                  <ShoppingBag className="h-5 w-5 text-[#1c9cf0]" />
+                  <span>المنتجات ({items.length})</span>
                 </h2>
               </div>
-              <div className="divide-y-2 divide-gray-200">
+
+              <div className="divide-y divide-gray-100">
                 {items.map((item) => {
-                  const itemTotal = item.product.price * item.quantity;
+                  const effectivePrice = item.price || item.product.price;
+                  const itemTotal = effectivePrice * item.quantity;
                   const itemPoints = Math.ceil(itemTotal / 10);
                   const canAffordWithPoints =
                     user && userPoints >= itemPoints && !loadingPoints;
+
+                  const hasDiscount = effectivePrice < item.product.price;
+
                   return (
                     <div
                       key={`${item.product.id}-${item.variantId || "default"}`}
-                      className="p-3 sm:p-6 bg-white hover:bg-blue-50 transition-colors"
+                      className="p-6 hover:bg-gray-50/50 transition-colors"
                     >
-                      <div className="flex gap-3 sm:gap-4">
-                        {/* Product Image - Mobile Optimized */}
-                        <div className="w-20 h-20 sm:w-24 sm:h-24 bg-gradient-to-br from-gray-100 to-gray-200 rounded-xl overflow-hidden flex-shrink-0 shadow-lg border-2 border-gray-300">
+                      <div className="flex gap-4">
+                        {/* Product Image */}
+                        <div className="w-24 h-24 bg-gray-100 rounded-xl overflow-hidden flex-shrink-0 border border-gray-100">
                           {item.product.image_url ? (
-                            <img
+                            <Image
                               src={item.product.image_url}
                               alt={item.product.name}
-                              loading="lazy"
+                              width={96}
+                              height={96}
                               className="w-full h-full object-cover"
+                              sizes="96px"
                             />
                           ) : (
                             <div className="w-full h-full flex items-center justify-center">
-                              <Package className="h-8 w-8 sm:h-10 sm:w-10 text-gray-500" />
+                              <Package className="h-8 w-8 text-gray-400" />
                             </div>
                           )}
                         </div>
+
                         {/* Product Details */}
-                        <div className="flex-1 min-w-0 flex flex-col">
-                          <div className="flex justify-between items-start mb-2 gap-2">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex justify-between items-start mb-3">
                             <div className="flex-1 min-w-0">
-                              <h3 className="text-sm sm:text-base font-black text-gray-900 line-clamp-2 leading-tight">
+                              <h3 className="font-bold text-base line-clamp-2">
                                 {item.product.name}
                               </h3>
-                              <p className="text-xs text-gray-600 mt-0.5 font-bold">
+                              <p className="text-sm text-gray-500 mt-0.5">
                                 {getCategoryArabic(item.product.category)}
                               </p>
-                              <p className="text-lg sm:text-xl font-black text-blue-700 mt-1">
-                                {formatCurrency(item.product.price)}
-                              </p>
+
+                              <div className="mt-2 flex items-center gap-2">
+                                <p className="text-lg font-bold text-[#1c9cf0]">
+                                  {formatCurrency(effectivePrice)}
+                                </p>
+                                {hasDiscount && (
+                                  <p className="text-sm text-gray-400 line-through">
+                                    {formatCurrency(item.product.price)}
+                                  </p>
+                                )}
+                              </div>
                             </div>
+
                             <button
                               onClick={() =>
                                 removeItem(item.product.id, item.variantId)
                               }
-                              className="p-2 text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors flex-shrink-0 shadow-lg border-2 border-red-700"
+                              className="text-gray-400 hover:text-red-500 p-1 transition-colors"
                               aria-label="حذف المنتج"
                             >
-                              <Trash2 className="h-4 w-4 sm:h-5 sm:w-5" />
+                              <Trash2 className="h-5 w-5" />
                             </button>
                           </div>
-                          {/* Quantity Control - Enhanced Visibility */}
-                          <div className="flex items-center justify-between mt-2 gap-3">
-                            <span className="text-xs sm:text-sm font-black text-gray-900 whitespace-nowrap">
-                              الكمية:
-                            </span>
-                            <div className="flex items-center gap-1.5 bg-gradient-to-r from-blue-100 to-indigo-100 rounded-xl px-2 py-1.5 border-2 border-gray-500/25 shadow-lg">
+
+                          {/* Quantity & Payment */}
+                          <div className="mt-4 flex flex-wrap items-center justify-between gap-4">
+                            {/* Quantity Control */}
+                            <div className="flex items-center bg-[#f0f3f4] rounded-full p-1 border border-gray-200">
                               <button
                                 onClick={() =>
                                   updateQuantity(
                                     item.product.id,
                                     item.quantity - 1,
-                                    item.variantId
+                                    item.variantId,
                                   )
                                 }
-                                className="p-2 bg-white hover:bg-red-100 rounded-lg transition-colors active:scale-95 border-2 border-gray-100 text-red-700 font-black shadow-md hover:shadow-lg"
+                                className="p-1.5 hover:bg-white rounded-full transition-colors"
                                 aria-label="تقليل الكمية"
                               >
-                                <Minus className="h-4 w-4 sm:h-5 sm:w-5" />
+                                <Minus className="h-4 w-4" />
                               </button>
-                              <span className="w-12 text-center font-black text-gray-900 text-base sm:text-xl">
+                              <span className="w-10 text-center font-bold">
                                 {item.quantity}
                               </span>
                               <button
@@ -382,87 +450,74 @@ export default function CartPage() {
                                   updateQuantity(
                                     item.product.id,
                                     item.quantity + 1,
-                                    item.variantId
+                                    item.variantId,
                                   )
                                 }
                                 disabled={
                                   item.quantity >= item.product.stock_estimate
                                 }
-                                className="p-2 bg-white hover:bg-green-100 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed active:scale-95 border-2 border-gray-100 text-green-700 font-black shadow-md hover:shadow-lg"
+                                className="p-1.5 hover:bg-white rounded-full transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                                 aria-label="زيادة الكمية"
                               >
-                                <Plus className="h-4 w-4 sm:h-5 sm:w-5" />
+                                <Plus className="h-4 w-4" />
                               </button>
                             </div>
-                          </div>
-                          {/* Payment Method - Enhanced Visibility */}
-                          <div className="mt-3 space-y-2">
-                            <span className="text-xs sm:text-sm font-black text-gray-900 block">
-                              طريقة الدفع:
-                            </span>
-                            <div className="grid grid-cols-2 gap-2">
+
+                            {/* Payment Method Tabs */}
+                            <div className="flex bg-[#f0f3f4] p-1 rounded-full border border-gray-200">
                               <button
                                 onClick={() =>
                                   updateItemPaymentMethod(
                                     item.product.id,
                                     "cash",
-                                    item.variantId
+                                    item.variantId,
                                   )
                                 }
-                                className={`flex items-center justify-center gap-1.5 px-3 py-3 rounded-xl border-2 transition-all text-xs sm:text-sm font-black shadow-lg ${item.paymentMethod === "cash"
-                                  ? "border-blue-600 bg-blue-600 text-white shadow-blue-500/50"
-                                  : "border-gray-400 bg-white text-gray-700 hover:border-blue-400 hover:bg-blue-50"
-                                  } active:scale-95`}
+                                className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all ${
+                                  item.paymentMethod === "cash"
+                                    ? "bg-white shadow-sm text-[#1c9cf0]"
+                                    : "text-gray-500"
+                                }`}
                               >
-                                <DollarSign className="h-5 w-5" />
-                                <span>نقداً</span>
+                                كاش
                               </button>
                               <button
                                 onClick={() =>
                                   updateItemPaymentMethod(
                                     item.product.id,
                                     "points",
-                                    item.variantId
+                                    item.variantId,
                                   )
                                 }
                                 disabled={!canAffordWithPoints}
-                                className={`flex items-center justify-center gap-1.5 px-3 py-3 rounded-xl border-2 transition-all text-xs sm:text-sm font-black shadow-lg ${item.paymentMethod === "points"
-                                  ? "border-purple-600 bg-purple-600 text-white shadow-purple-500/50"
-                                  : "border-gray-400 bg-white text-gray-700 hover:border-purple-400 hover:bg-purple-50"
-                                  } disabled:opacity-40 disabled:cursor-not-allowed active:scale-95`}
+                                className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all ${
+                                  item.paymentMethod === "points"
+                                    ? "bg-white shadow-sm text-purple-600"
+                                    : "text-gray-500"
+                                } disabled:opacity-30 disabled:cursor-not-allowed`}
                                 title={
                                   !user
                                     ? "سجل الدخول لاستخدام النقاط"
                                     : userPoints < itemPoints
-                                      ? `تحتاج ${itemPoints - userPoints
-                                      } نقطة إضافية`
+                                      ? `تحتاج ${
+                                          itemPoints - userPoints
+                                        } نقطة إضافية`
                                       : `ادفع بـ ${itemPoints} نقطة`
                                 }
                               >
-                                <Coins className="h-5 w-5" />
-                                <span className="truncate">
-                                  {loadingPoints
-                                    ? "..."
-                                    : `${itemPoints} نقطة`}
-                                </span>
+                                نقاط
                               </button>
                             </div>
-                          </div>
-                          {/* Total - Enhanced Visibility */}
-                          <div className="flex justify-between items-center mt-3 pt-3 border-t-2 border-gray-300">
-                            <span className="text-xs sm:text-sm font-black text-gray-900">
-                              المجموع:
-                            </span>
-                            <div className="text-right">
-                              <span className="text-base sm:text-lg font-black text-blue-700">
-                                {item.paymentMethod === "points" ? (
-                                  <span className="text-purple-700">
-                                    {itemPoints} نقطة
-                                  </span>
-                                ) : (
-                                  formatCurrency(itemTotal)
-                                )}
-                              </span>
+
+                            {/* Item Total */}
+                            <div className="text-lg font-bold text-[#1c9cf0]">
+                              {item.paymentMethod === "points" ? (
+                                <span className="text-purple-600">
+                                  {itemPoints} نقطة
+                                </span>
+                              ) : (
+                                formatCurrency(itemTotal)
+                              )}
                             </div>
                           </div>
                         </div>
@@ -471,10 +526,11 @@ export default function CartPage() {
                   );
                 })}
               </div>
-              <div className="px-4 sm:px-6 py-3 sm:py-4 border-t-2 border-gray-300 bg-gray-50">
+
+              <div className="p-4 bg-gray-50/50 border-t border-gray-100">
                 <button
                   onClick={clearCart}
-                  className="text-white bg-red-600 hover:bg-red-700 px-4 py-2 rounded-lg text-sm font-black inline-flex items-center gap-2 shadow-lg border-2 border-red-700"
+                  className="text-sm font-bold text-red-500 hover:text-red-600 flex items-center gap-1 transition-colors"
                 >
                   <Trash2 className="h-4 w-4" />
                   مسح السلة
@@ -482,176 +538,80 @@ export default function CartPage() {
               </div>
             </div>
           </div>
-          {/* Summary Section - Enhanced Visibility */}
-          <div className="lg:col-span-1 space-y-3 sm:space-4 md:space-y-6">
-            {/* Order Summary Card */}
-            <div className="bg-white rounded-lg sm:rounded-xl shadow-2xl border-2 border-gray-300 sticky top-2 sm:top-4 md:top-8 z-10">
-              <div className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 md:py-5 border-b-2 border-gray-300 bg-gradient-to-r from-green-100 to-emerald-100">
-                <h2 className="text-base sm:text-lg md:text-xl font-black text-gray-900 flex items-center gap-1.5 sm:gap-2">
-                  <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 text-green-700 flex-shrink-0" />
-                  <span>ملخص الطلب</span>
-                </h2>
+
+          {/* Summary Section */}
+          <div className="lg:col-span-1 space-y-6">
+            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm sticky top-8">
+              <div className="p-6 border-b border-gray-100">
+                <h2 className="text-lg font-bold">ملخص الطلب</h2>
               </div>
-              <div className="p-3 sm:p-4 md:p-6 space-y-3 sm:space-y-4 md:space-y-5">
+
+              <div className="p-6 space-y-4">
                 {user && (
-                  <div className="p-3 sm:p-4 bg-gradient-to-r from-blue-100 to-indigo-100 rounded-lg flex items-center justify-between gap-2 border-2 border-blue-400 shadow-lg">
-                    <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
-                      <Coins className="h-5 w-5 sm:h-6 sm:w-6 text-blue-700 flex-shrink-0" />
-                      <span className="text-xs sm:text-sm font-black text-gray-900 truncate">
-                        النقاط المتاحة:
-                      </span>
+                  <div className="p-3 bg-[#f0f3f4] rounded-xl flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Coins className="h-5 w-5 text-[#1c9cf0]" />
+                      <span className="text-sm font-bold">نقاطك المتاحة</span>
                     </div>
-                    <span className="text-sm sm:text-base md:text-lg font-black text-blue-700 whitespace-nowrap">
-                      {loadingPoints ? "..." : userPoints.toLocaleString()}
+                    <span className="font-bold text-[#1c9cf0]">
+                      {userPoints}
                     </span>
                   </div>
                 )}
-                {/* Address Selection Section - Enhanced */}
-                <div className="space-y-2 sm:space-y-3">
-                  <label className="block text-xs sm:text-sm md:text-base font-black text-gray-900 mb-2 sm:mb-3 text-right px-1">
-                    <span className="flex items-center gap-1.5 sm:gap-2">
-                      <MapPin className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 text-blue-700 flex-shrink-0" />
-                      <span>عنوان التوصيل</span>
-                      <span className="text-red-600">*</span>
+
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">إجمالي المنتجات</span>
+                    <span className="font-bold">
+                      {formatCurrency(totalPrice)}
                     </span>
-                  </label>
-                  <div className="bg-gray-100 rounded-lg sm:rounded-xl p-2 sm:p-3 md:p-4 border-2 border-dashed border-gray-400">
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">رسوم التوصيل</span>
+                    <span className="font-bold">
+                      {formatCurrency(deliveryFee)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">رسوم الخدمة</span>
+                    <span className="font-bold">
+                      {formatCurrency(platformCommission)}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="pt-4 border-t border-gray-100">
+                  <div className="flex justify-between items-center mb-6">
+                    <span className="font-bold">المطلوب دفعه</span>
+                    <div className="text-right">
+                      <div className="text-xl font-black text-[#1c9cf0]">
+                        {formatCurrency(cashNeeded)}
+                      </div>
+                      {pointsNeeded > 0 && (
+                        <div className="text-xs text-purple-600 font-bold">
+                          + {pointsNeeded} نقطة
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="mb-6">
+                    <label className="block text-sm font-bold mb-2">
+                      عنوان التوصيل
+                    </label>
                     <AddressStepDynamic
                       onAddressSelected={setSelectedAddress}
-                      selectedAddressId={selectedAddress?.id}
-                      className="w-full"
                     />
                   </div>
-                  {selectedAddress && (
-                    <div className="mt-2 sm:mt-3 p-3 sm:p-4 bg-gradient-to-r from-green-100 to-emerald-100 border-2 border-green-400 rounded-lg sm:rounded-xl shadow-lg">
-                      <p className="text-xs sm:text-sm md:text-base text-green-900 flex items-center gap-1.5 sm:gap-2 text-right mb-1.5 sm:mb-2 font-black">
-                        <CheckCircle className="h-5 w-5 sm:h-6 sm:w-6 flex-shrink-0" />
-                        <span>✓ العنوان المحدد</span>
-                      </p>
-                      <div className="text-right space-y-1">
-                        <p className="text-xs sm:text-sm font-black text-green-900 line-clamp-1">
-                          {selectedAddress.street}
-                        </p>
-                        {selectedAddress.neighborhood && (
-                          <p className="text-[10px] sm:text-xs text-green-800 line-clamp-1 font-bold">
-                            {selectedAddress.neighborhood}
-                          </p>
-                        )}
-                        {selectedAddress.address_details && (
-                          <p className="text-[10px] sm:text-xs text-green-700 mt-1.5 sm:mt-2 pt-1.5 sm:pt-2 border-t-2 border-green-300 line-clamp-2 font-bold">
-                            {selectedAddress.address_details}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  )}
+
+                  <button
+                    onClick={handleCheckout}
+                    disabled={isProcessing || items.length === 0}
+                    className="w-full py-4 bg-[#1c9cf0] text-white rounded-full font-bold text-lg shadow-md hover:shadow-lg hover:opacity-90 transition-all active:scale-95 disabled:opacity-50 disabled:pointer-events-none"
+                  >
+                    {isProcessing ? "جاري المعالجة..." : "تأكيد الطلب"}
+                  </button>
                 </div>
-                <div className="space-y-2 sm:space-y-3 pt-3 sm:pt-4 border-t-2 border-gray-300">
-                  {pointsNeeded > 0 && (
-                    <div className="flex justify-between items-center text-xs sm:text-sm gap-2">
-                      <span className="text-gray-900 flex items-center gap-1 min-w-0 font-bold">
-                        <Coins className="h-4 w-4 sm:h-5 sm:w-5 text-purple-700 flex-shrink-0" />
-                        <span className="truncate">الدفع بالنقاط:</span>
-                      </span>
-                      <span className="font-black text-purple-700 whitespace-nowrap">
-                        {pointsNeeded} نقطة
-                      </span>
-                    </div>
-                  )}
-                  <div className="flex justify-between items-center text-xs sm:text-sm gap-2">
-                    <span className="text-gray-900 truncate font-bold">الدفع النقدي:</span>
-                    <span className="text-gray-900 whitespace-nowrap font-black">
-                      {formatCurrency(getCashNeeded())}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center text-xs sm:text-sm gap-2">
-                    <span className="text-gray-900 truncate font-bold">رسوم التوصيل:</span>
-                    <span className="text-gray-900 whitespace-nowrap font-black">
-                      {deliveryFee === 0
-                        ? "مجاني 🎉"
-                        : formatCurrency(deliveryFee)}
-                    </span>
-                  </div>
-                  {platformCommission > 0 && (
-                    <div className="bg-gradient-to-r from-yellow-100 to-orange-100 border-2 border-yellow-400 px-3 sm:px-4 py-2 sm:py-3 rounded-lg mt-1 sm:mt-2 shadow-lg">
-                      <div className="flex justify-between items-center gap-2">
-                        <div className="flex flex-col min-w-0">
-                          <span className="text-xs sm:text-sm font-black text-yellow-900 truncate">
-                            💰 رسوم المنصة
-                          </span>
-                          <span className="text-[10px] sm:text-xs text-yellow-800 font-bold">
-                            (تمويل تطوير الخدمة)
-                          </span>
-                        </div>
-                        <span className="text-sm sm:text-base md:text-lg font-black text-yellow-900 whitespace-nowrap">
-                          {formatCurrency(platformCommission)}
-                        </span>
-                      </div>
-                    </div>
-                  )}
-                  <div className="flex justify-between items-center text-sm sm:text-base md:text-lg font-black pt-2 sm:pt-3 border-t-2 border-gray-400 gap-2">
-                    <span className="text-gray-900 truncate">إجمالي النقد:</span>
-                    <span className="text-blue-700 whitespace-nowrap">
-                      {formatCurrency(cashNeeded)}
-                    </span>
-                  </div>
-                  {pointsNeeded > userPoints && (
-                    <div className="mt-2 sm:mt-3 p-3 sm:p-4 bg-red-100 border-2 border-red-400 rounded-lg shadow-lg">
-                      <p className="text-xs sm:text-sm text-red-900 flex items-center gap-1.5 sm:gap-2 font-bold">
-                        <AlertCircle className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
-                        <span className="leading-relaxed">
-                          نقاط غير كافية! تحتاج {pointsNeeded - userPoints} نقطة
-                          إضافية.
-                        </span>
-                      </p>
-                    </div>
-                  )}
-                </div>
-                <button
-                  onClick={handleCheckout}
-                  disabled={
-                    !user ||
-                    !selectedAddress ||
-                    !selectedAddress.lat ||
-                    !selectedAddress.lng ||
-                    isProcessing ||
-                    pointsNeeded > userPoints
-                  }
-                  className="w-full bg-blue-600 text-white py-3 sm:py-4 md:py-5 px-3 sm:px-4 rounded-lg hover:bg-blue-700 active:bg-blue-800 transition-colors font-black disabled:bg-gray-400 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2 text-sm sm:text-base md:text-lg shadow-2xl disabled:shadow-none border-2 border-blue-700 disabled:border-gray-500"
-                >
-                  {isProcessing ? (
-                    <>
-                      جاري المعالجة...
-                      <LoadingSpinner size="small" color="blue" />
-                    </>
-                  ) : !user ? (
-                    "سجل الدخول للمتابعة"
-                  ) : !selectedAddress ? (
-                    "اختر عنوان التوصيل"
-                  ) : pointsNeeded > userPoints ? (
-                    "نقاط غير كافية"
-                  ) : (
-                    "إتمام الطلب"
-                  )}
-                </button>
-                {!user && (
-                  <p className="text-xs sm:text-sm text-gray-700 text-center font-bold">
-                    <Link
-                      href="/signup"
-                      className="text-blue-700 hover:text-blue-800 underline"
-                    >
-                      إنشاء حساب
-                    </Link>{" "}
-                    أو{" "}
-                    <Link
-                      href="/login"
-                      className="text-blue-700 hover:text-blue-800 underline"
-                    >
-                      تسجيل الدخول
-                    </Link>{" "}
-                    للمتابعة
-                  </p>
-                )}
               </div>
             </div>
           </div>

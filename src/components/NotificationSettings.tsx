@@ -259,12 +259,6 @@ export default function NotificationSettings() {
                         {saving ? "جاري الحفظ..." : "حفظ الإعدادات"}
                     </Button>
                 </Stack>
-
-                <Alert severity="info" sx={{ mt: 2, borderRadius: 2 }}>
-                    <Typography variant="body2">
-                        <strong>ملاحظة:</strong> بعض الإشعارات تتطلب إعداد خدمة البريد الإلكتروني لتعمل بشكل صحيح.
-                    </Typography>
-                </Alert>
             </CardContent>
         </Card>
     );

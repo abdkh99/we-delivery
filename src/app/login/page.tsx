@@ -3,9 +3,8 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/client";
 import { Eye, EyeOff, ShoppingBag, Lock, User, ArrowRight, Wifi, WifiOff } from "lucide-react";
-import { withRetry, isNetworkError, getNetworkErrorMessage } from "@/lib/network-utils";
+import { createClient } from "@/lib/supabase/client";
 
 export default function LoginPage() {
   const [username, setUsername] = useState("");
@@ -13,12 +12,8 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
-  const [isRetrying, setIsRetrying] = useState(false);
-  const [retryCount, setRetryCount] = useState(0);
   const [isOnline, setIsOnline] = useState(true);
   const router = useRouter();
-  const supabase = createClient();
 
   // Check online status
   useEffect(() => {
@@ -37,7 +32,6 @@ export default function LoginPage() {
     e.preventDefault();
     setLoading(true);
     setError("");
-    setSuccess("");
 
     // Validation
     if (!username.trim()) {
@@ -60,95 +54,37 @@ export default function LoginPage() {
     }
 
     try {
-      // Generate email from username (same as signup)
-      const generatedEmail = `${username.toLowerCase()}@estore.local`;
+      const supabase = createClient();
+      const email = `${username.toLowerCase()}@estore.local`;
 
-      // Use retry logic with timeout for slow connections
-      const { data, error } = await withRetry(
-        async () => {
-          const result = await supabase.auth.signInWithPassword({
-            email: generatedEmail,
-            password,
-          });
-          if (result.error) throw result.error;
-          return result;
-        },
-        {
-          maxRetries: 2,
-          timeout: 30000, // 30 seconds
-          retryDelay: 2000,
-        },
-        (attempt) => {
-          setIsRetrying(true);
-          setRetryCount(attempt);
-        }
-      );
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
 
-      if (error) {
-        // Better error messages
-        console.error("Login error details:", error);
+      if (error || !data?.user) {
+        const message = error?.message || "";
 
-        if (error.message.includes("Invalid login credentials")) {
+        if (
+          message.includes("Invalid login credentials") ||
+          message.includes("تم إدخال بيانات غير صحيحة")
+        ) {
           setError("اسم المستخدم أو كلمة المرور غير صحيحة");
-        } else if (error.message.includes("Email not confirmed")) {
-          setError(
-            "⚠️ البريد الإلكتروني غير مؤكد. يرجى الاتصال بالدعم الفني أو تعطيل تأكيد البريد من إعدادات Supabase"
-          );
-        } else if (error.message.includes("User not found")) {
+        } else if (message.toLowerCase().includes("not found")) {
           setError("المستخدم غير موجود. يرجى التسجيل أولاً");
         } else {
-          setError(getNetworkErrorMessage(error));
+          setError(message || "حدث خطأ أثناء تسجيل الدخول");
         }
         setLoading(false);
         return;
       }
 
-      if (data?.user) {
-        // Give AuthContext time to pick up the session change
-        await new Promise((resolve) => setTimeout(resolve, 100));
-        // Successfully logged in
-        router.push("/");
-        router.refresh();
-      }
+      // نجاح تسجيل الدخول
+      router.push("/");
+      router.refresh();
     } catch (err: unknown) {
       console.error("Login error:", err);
-      if (isNetworkError(err)) {
-        setError(getNetworkErrorMessage(err));
-      } else {
-        setError("حدث خطأ غير متوقع. يرجى المحاولة مرة أخرى");
-      }
-    } finally {
-      setLoading(false);
-      setIsRetrying(false);
-      setRetryCount(0);
-    }
-  };
-
-  const handleGoogleSignIn = async () => {
-    setLoading(true);
-    setError("");
-    setSuccess("");
-
-    try {
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
-        },
-      });
-
-      if (error) {
-        if (error.message.includes("popup")) {
-          setError("فشل فتح نافذة تسجيل الدخول بـ Google");
-        } else {
-          setError("فشل تسجيل الدخول بـ Google");
-        }
-      } else {
-        setSuccess("جاري تحويلك إلى Google...");
-      }
-    } catch (err: unknown) {
-      console.error("Google signin error:", err);
-      setError("فشل تسجيل الدخول بـ Google");
+      setError("حدث خطأ غير متوقع. يرجى المحاولة مرة أخرى");
     } finally {
       setLoading(false);
     }
@@ -188,18 +124,12 @@ export default function LoginPage() {
             <p className="text-gray-600 text-base">
               سجل دخولك للوصول إلى حسابك ومتابعة التسوق
             </p>
-            
+
             {/* Network Status Indicator */}
             {!isOnline && (
               <div className="mt-4 inline-flex items-center gap-2 px-3 py-1.5 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
                 <WifiOff className="h-4 w-4" />
                 <span>لا يوجد اتصال بالإنترنت</span>
-              </div>
-            )}
-            {isRetrying && (
-              <div className="mt-4 inline-flex items-center gap-2 px-3 py-1.5 bg-yellow-50 border border-yellow-200 rounded-lg text-yellow-700 text-sm">
-                <Wifi className="h-4 w-4 animate-pulse" />
-                <span>جاري إعادة المحاولة... ({retryCount}/2)</span>
               </div>
             )}
           </div>
@@ -268,7 +198,7 @@ export default function LoginPage() {
               </div>
             </div>
 
-            {/* رسائل الخطأ والنجاح */}
+            {/* رسائل الخطأ */}
             {error && (
               <div className="bg-red-50 border-l-4 border-red-500 text-red-800 px-4 py-3.5 rounded-xl animate-shake">
                 <div className="flex items-start gap-3">
@@ -287,33 +217,7 @@ export default function LoginPage() {
                   </div>
                   <div className="flex-1">
                     <div className="font-semibold text-sm">{error}</div>
-                    {error.includes("Invalid") && (
-                      <div className="text-xs mt-1.5 text-red-600">
-                        تأكد من اسم المستخدم وكلمة المرور
-                      </div>
-                    )}
                   </div>
-                </div>
-              </div>
-            )}
-
-            {success && (
-              <div className="bg-green-50 border-l-4 border-green-500 text-green-800 px-4 py-3.5 rounded-xl">
-                <div className="flex items-center gap-3">
-                  <div className="flex-shrink-0">
-                    <svg
-                      className="h-5 w-5 text-green-500"
-                      viewBox="0 0 20 20"
-                      fill="currentColor"
-                    >
-                      <path
-                        fillRule="evenodd"
-                        d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                  </div>
-                  <span className="text-sm font-semibold">{success}</span>
                 </div>
               </div>
             )}
@@ -346,7 +250,7 @@ export default function LoginPage() {
                       d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                     ></path>
                   </svg>
-                  {isRetrying ? "جاري إعادة المحاولة..." : "جاري تسجيل الدخول..."}
+                  جاري تسجيل الدخول...
                 </>
               ) : !isOnline ? (
                 <>

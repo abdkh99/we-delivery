@@ -42,7 +42,8 @@ import {
   Zap,
   Bell,
 } from "lucide-react";
-import { AdminDashboardSkeleton } from "@/components/AdminSkeleton";
+import { CircularProgress, Box, FormControl, InputLabel, Select as MuiSelect, MenuItem as MuiMenuItem, ButtonBase, Button } from "@mui/material";
+import type { SelectChangeEvent } from "@mui/material/Select";
 import ConfirmationModal from "@/components/ConfirmationModal";
 import { toast } from "sonner";
 
@@ -359,10 +360,14 @@ export default function AdminDashboard() {
 
   if (loading && !orders.length && !products.length) {
     return (
-      <>
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-purple-50">
         <Navigation />
-        <AdminDashboardSkeleton />
-      </>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "60vh" }}>
+            <CircularProgress size={60} />
+          </Box>
+        </div>
+      </div>
     );
   }
 
@@ -461,10 +466,10 @@ export default function AdminDashboard() {
 
         <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8 py-4 sm:py-6 lg:py-8 space-y-6">
           {/* Enhanced Header with Gradient */}
-          <div className="bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-700 text-white rounded-3xl p-6 sm:p-8 shadow-2xl border border-blue-400/20">
+          <div className=" to-indigo-700 text-black rounded-3xl p-6 sm:p-8 shadow-2xl border border-blue-400/20">
             <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
               <div>
-                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/20 backdrop-blur-sm text-white text-sm font-bold shadow-lg border border-white/30">
+                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-500/20 backdrop-blur-sm text-black text-sm font-bold shadow-lg border border-white/30">
                   <Sparkles className="h-4 w-4" />
                   لوحة الإدارة المتقدمة
                 </div>
@@ -472,7 +477,7 @@ export default function AdminDashboard() {
                   أهلاً {profile?.name || "مدير"}، إدارة جميع عمليات المتجر في
                   مكان واحد
                 </h1>
-                <p className="text-sm sm:text-base text-blue-100 mt-2 font-medium">
+                <p className="text-sm sm:text-base text-black mt-2 font-medium">
                   تابع الطلبات، حدّث الأسعار، وفعّل السائقين الفاعلين في الوقت
                   الحقيقي.
                 </p>
@@ -482,9 +487,9 @@ export default function AdminDashboard() {
 
           {/* Stats Cards */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
-            <div className="bg-white rounded-xl shadow-xl border-2 border-blue-200 p-3 sm:p-4 lg:p-6 hover:shadow-2xl hover:border-blue-300 transition-all">
+            <div className="bg-white rounded-xl shadow-xl border-2 p-3 sm:p-4 lg:p-6">
               <div className="flex items-center">
-                <div className="p-2 bg-blue-600 rounded-lg shadow-lg">
+                <div className="p-2 bg-blue-600 rounded-lg shadow-lg ml-3">
                   <ShoppingCart className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
                 </div>
                 <div className="ml-3">
@@ -498,9 +503,9 @@ export default function AdminDashboard() {
               </div>
             </div>
 
-            <div className="bg-white rounded-xl shadow-xl border-2 border-amber-200 p-3 sm:p-4 lg:p-6 hover:shadow-2xl hover:border-amber-300 transition-all">
+            <div className="bg-white rounded-xl shadow-xl border-2 p-3 sm:p-4 lg:p-6">
               <div className="flex items-center">
-                <div className="p-2 bg-amber-600 rounded-lg shadow-lg">
+                <div className="p-2 bg-amber-600 rounded-lg shadow-lg ml-3">
                   <Clock className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
                 </div>
                 <div className="ml-3">
@@ -514,9 +519,9 @@ export default function AdminDashboard() {
               </div>
             </div>
 
-            <div className="bg-white rounded-xl shadow-xl border-2 border-emerald-200 p-3 sm:p-4 lg:p-6 hover:shadow-2xl hover:border-emerald-300 transition-all">
+            <div className="bg-white rounded-xl shadow-xl border-2 p-3 sm:p-4 lg:p-6">
               <div className="flex items-center">
-                <div className="p-2 bg-emerald-600 rounded-lg shadow-lg">
+                <div className="p-2 bg-emerald-600 rounded-lg shadow-lg ml-3">
                   <DollarSign className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
                 </div>
                 <div className="ml-3">
@@ -530,9 +535,9 @@ export default function AdminDashboard() {
               </div>
             </div>
 
-            <div className="bg-white rounded-xl shadow-xl border-2 border-green-200 p-3 sm:p-4 lg:p-6 hover:shadow-2xl hover:border-green-300 transition-all">
+            <div className="bg-white rounded-xl shadow-xl border-2 p-3 sm:p-4 lg:p-6">
               <div className="flex items-center">
-                <div className="p-2 bg-green-600 rounded-lg shadow-lg">
+                <div className="p-2 bg-green-600 rounded-lg shadow-lg ml-3">
                   <DollarSign className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
                 </div>
                 <div className="ml-3">
@@ -554,37 +559,74 @@ export default function AdminDashboard() {
                 label: "إضافة منتج",
                 href: "/admin/products/new",
                 icon: Plus,
-                color: "bg-gradient-to-br from-blue-600 to-blue-700 text-white border-blue-400/30 shadow-xl shadow-blue-500/20 hover:shadow-2xl",
+                color:
+                  "bg-gradient-to-br from-blue-600 to-blue-700 text-white border-blue-400/30 shadow-xl shadow-blue-500/20",
+              },
+              {
+                label: "إدارة العروض",
+                href: "/admin/offers",
+                icon: Sparkles,
+                color:
+                  "bg-gradient-to-br from-pink-600 to-pink-700 text-white border-pink-400/30 shadow-xl shadow-pink-500/20",
               },
               {
                 label: "إدارة السائقين",
                 href: "/admin",
                 icon: Truck,
-                color: "bg-gradient-to-br from-purple-600 to-purple-700 text-white border-purple-400/30 shadow-xl shadow-purple-500/20 hover:shadow-2xl",
+                color:
+                  "bg-gradient-to-br from-purple-600 to-purple-700 text-white border-purple-400/30 shadow-xl shadow-purple-500/20",
               },
               {
                 label: "تقرير سريع",
                 href: "/admin/quick-report",
                 icon: Flame,
-                color: "bg-gradient-to-br from-orange-600 to-orange-700 text-white border-orange-400/30 shadow-xl shadow-orange-500/20 hover:shadow-2xl",
+                color:
+                  "bg-gradient-to-br from-orange-600 to-orange-700 text-white border-orange-400/30 shadow-xl shadow-orange-500/20",
               },
               {
                 label: "إدارة سعر الصرف",
                 href: "/admin/currency",
                 icon: DollarSign,
-                color: "bg-gradient-to-br from-emerald-600 to-emerald-700 text-white border-emerald-400/30 shadow-xl shadow-emerald-500/20 hover:shadow-2xl",
+                color:
+                  "bg-gradient-to-br from-emerald-600 to-emerald-700 text-white border-emerald-400/30 shadow-xl shadow-emerald-500/20",
               },
             ].map((action) => (
-              <Link
+              <ButtonBase
                 key={action.label}
+                component={Link}
                 href={action.href}
-                className={`flex items-center gap-3 px-4 py-3 rounded-2xl border backdrop-blur-sm ${action.color} hover:scale-105 transition-all duration-200`}
+                focusRipple
+                className={`flex items-center gap-3 px-4 py-3 rounded-2xl border backdrop-blur-sm ${action.color} transition-all duration-200`}
+                sx={{
+                  direction: "rtl",
+                  px: 2,
+                  py: 2,
+                  borderRadius: "16px",
+                  width: "100%",
+                  justifyContent: "flex-start",
+                  textAlign: "right",
+                  position: "relative",
+                  overflow: "hidden",
+
+                  "&::before": {
+                    content: '""',
+                    position: "absolute",
+                    inset: 0,
+                    background: "rgba(255,255,255,0)",
+                    transition: "all .25s ease",
+                  },
+
+                  "&:hover::before": {
+                    background: "rgba(0, 0, 0, 0.08)",
+                  },
+                }}
               >
                 <action.icon className="h-5 w-5" />
                 <span className="font-bold">{action.label}</span>
-              </Link>
+              </ButtonBase>
             ))}
           </div>
+
 
           {/* Main Content Tabs */}
           <div className="bg-white rounded-xl shadow-2xl border-2 border-gray-200 overflow-hidden">
@@ -597,17 +639,40 @@ export default function AdminDashboard() {
                   { id: "reports", name: "التقارير", icon: FileText },
                   { id: "settings", name: "الإعدادات", icon: Settings },
                 ].map((tab) => (
-                  <button
+                  <Button
+                    sx={{
+                      flexShrink: 0,
+                      py: { xs: "12px", sm: "16px" },
+                      px: { xs: "12px", sm: "24px" },
+                      borderBottom: "2px solid",
+                      fontWeight: "bold",
+                      fontSize: { xs: "0.75rem", sm: "0.875rem" },
+                      transition: "all .2s ease",
+
+                      ...(activeTab === tab.id
+                        ? {
+                          borderColor: "#2563eb", // blue-600
+                          color: "#1d4ed8", // blue-700
+                          backgroundColor: "#eff6ff", // blue-50
+                        }
+                        : {
+                          borderColor: "transparent",
+                          color: "#4b5563", // gray-600
+
+                          "&:hover": {
+                            color: "#111827", // gray-900
+                            borderColor: "#9ca3af", // gray-400
+                            backgroundColor: "#f3f4f6", // gray-100
+                          },
+                        }),
+                    }}
+
+                    variant="text"
                     key={tab.id}
-                    onClick={() => setActiveTab(tab.id)}
-                    className={`flex-shrink-0 py-3 sm:py-4 px-3 sm:px-6 border-b-2 font-bold text-xs sm:text-sm transition-all ${activeTab === tab.id
-                      ? "border-blue-600 text-blue-700 bg-blue-50"
-                      : "border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-400 hover:bg-gray-100"
-                      }`}
-                  >
+                    onClick={() => setActiveTab(tab.id)}>
                     <tab.icon className="h-4 w-4 sm:h-5 sm:w-5 inline mr-1 sm:mr-2" />
                     <span className="whitespace-nowrap">{tab.name}</span>
-                  </button>
+                  </Button>
                 ))}
               </nav>
             </div>
@@ -623,32 +688,64 @@ export default function AdminDashboard() {
 
                     {/* Filters */}
                     <div className="flex gap-3 flex-wrap">
-                      <select
-                        value={statusFilter}
-                        onChange={(e) => setStatusFilter(e.target.value)}
-                        className="text-sm border-2 border-gray-300 rounded-lg px-3 py-2 bg-white text-gray-900 font-bold hover:border-blue-500 focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all cursor-pointer shadow-md"
-                      >
-                        <option value="all">🔍 جميع الحالات</option>
-                        <option value="pending">⏳ قيد الانتظار</option>
-                        <option value="confirmed">✅ مؤكد</option>
-                        <option value="on_delivery">🚚 جاري التوصيل</option>
-                        <option value="delivered">📦 تم التوصيل</option>
-                        <option value="cancelled">❌ ملغي</option>
-                      </select>
+                      <FormControl size="small" sx={{ minWidth: 180 }}>
+                        <InputLabel id="status-filter-label" sx={{ fontFamily: 'inherit', fontWeight: 'bold', fontSize: '0.875rem', '&.Mui-focused': { color: '#2563eb' } }}>الحالة</InputLabel>
+                        <MuiSelect
+                          labelId="status-filter-label"
+                          value={statusFilter}
+                          label="الحالة"
+                          onChange={(e: SelectChangeEvent) => setStatusFilter(e.target.value)}
+                          sx={{
+                            borderRadius: '0.75rem',
+                            fontFamily: 'inherit',
+                            fontWeight: 'bold',
+                            fontSize: '0.875rem',
+                            backgroundColor: 'white',
+                            boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)',
+                            '& .MuiOutlinedInput-notchedOutline': { borderColor: '#d1d5db', borderWidth: 2 },
+                            '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#3b82f6' },
+                            '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#2563eb' },
+                          }}
+                          MenuProps={{ disableScrollLock: true, PaperProps: { sx: { borderRadius: '0.75rem', mt: 0.5, boxShadow: '0 10px 25px -5px rgba(0,0,0,0.15)' } } }}
+                        >
+                          <MuiMenuItem value="all" sx={{ fontFamily: 'inherit', fontWeight: 'bold', fontSize: '0.875rem' }}> جميع الحالات</MuiMenuItem>
+                          <MuiMenuItem value="pending" sx={{ fontFamily: 'inherit', fontWeight: 'bold', fontSize: '0.875rem' }}>⏳ قيد الانتظار</MuiMenuItem>
+                          <MuiMenuItem value="confirmed" sx={{ fontFamily: 'inherit', fontWeight: 'bold', fontSize: '0.875rem' }}>✅ مؤكد</MuiMenuItem>
+                          <MuiMenuItem value="on_delivery" sx={{ fontFamily: 'inherit', fontWeight: 'bold', fontSize: '0.875rem' }}>🚚 جاري التوصيل</MuiMenuItem>
+                          <MuiMenuItem value="delivered" sx={{ fontFamily: 'inherit', fontWeight: 'bold', fontSize: '0.875rem' }}>📦 تم التوصيل</MuiMenuItem>
+                          <MuiMenuItem value="cancelled" sx={{ fontFamily: 'inherit', fontWeight: 'bold', fontSize: '0.875rem' }}>❌ ملغي</MuiMenuItem>
+                        </MuiSelect>
+                      </FormControl>
 
                       {regions.length > 0 && (
-                        <select
-                          value={regionFilter}
-                          onChange={(e) => setRegionFilter(e.target.value)}
-                          className="text-sm border-2 border-gray-300 rounded-lg px-3 py-2 bg-white text-gray-900 font-bold hover:border-purple-500 focus:border-purple-600 focus:outline-none focus:ring-2 focus:ring-purple-500/50 transition-all cursor-pointer shadow-md"
-                        >
-                          <option value="all">📍 جميع المناطق</option>
-                          {regions.map((region) => (
-                            <option key={region} value={region}>
-                              {region}
-                            </option>
-                          ))}
-                        </select>
+                        <FormControl size="small" sx={{ minWidth: 180 }}>
+                          <InputLabel id="region-filter-label" sx={{ fontFamily: 'inherit', fontWeight: 'bold', fontSize: '0.875rem', '&.Mui-focused': { color: '#7c3aed' } }}>المنطقة</InputLabel>
+                          <MuiSelect
+                            labelId="region-filter-label"
+                            value={regionFilter}
+                            label="المنطقة"
+                            onChange={(e: SelectChangeEvent) => setRegionFilter(e.target.value)}
+                            sx={{
+                              borderRadius: '0.75rem',
+                              fontFamily: 'inherit',
+                              fontWeight: 'bold',
+                              fontSize: '0.875rem',
+                              backgroundColor: 'white',
+                              boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)',
+                              '& .MuiOutlinedInput-notchedOutline': { borderColor: '#d1d5db', borderWidth: 2 },
+                              '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#a855f7' },
+                              '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#7c3aed' },
+                            }}
+                            MenuProps={{ disableScrollLock: true, PaperProps: { sx: { borderRadius: '0.75rem', mt: 0.5, boxShadow: '0 10px 25px -5px rgba(0,0,0,0.15)' } } }}
+                          >
+                            <MuiMenuItem value="all" sx={{ fontFamily: 'inherit', fontWeight: 'bold', fontSize: '0.875rem' }}>📍 جميع المناطق</MuiMenuItem>
+                            {regions.map((region) => (
+                              <MuiMenuItem key={region} value={region} sx={{ fontFamily: 'inherit', fontWeight: 'bold', fontSize: '0.875rem' }}>
+                                {region}
+                              </MuiMenuItem>
+                            ))}
+                          </MuiSelect>
+                        </FormControl>
                       )}
                     </div>
                   </div>
@@ -670,15 +767,15 @@ export default function AdminDashboard() {
                             </div>
                           </div>
                           <span
-                            className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-bold shadow-md ${order.status === "pending"
-                              ? "bg-amber-600 text-white"
+                            className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold ring-1 ring-inset ${order.status === "pending"
+                              ? "bg-amber-50 text-amber-700 ring-amber-600/20"
                               : order.status === "confirmed"
-                                ? "bg-blue-600 text-white"
+                                ? "bg-blue-50 text-blue-700 ring-blue-600/20"
                                 : order.status === "on_delivery"
-                                  ? "bg-orange-600 text-white"
+                                  ? "bg-orange-50 text-orange-700 ring-orange-600/20"
                                   : order.status === "delivered"
-                                    ? "bg-emerald-600 text-white"
-                                    : "bg-red-600 text-white"
+                                    ? "bg-emerald-50 text-emerald-700 ring-emerald-600/20"
+                                    : "bg-red-50 text-red-700 ring-red-600/20"
                               }`}
                           >
                             {formatOrderStatus(order.status)}
@@ -726,26 +823,42 @@ export default function AdminDashboard() {
                                 تأكيد
                               </button>
                               {drivers.length > 0 && (
-                                <select
-                                  onChange={(e) => {
-                                    if (e.target.value) {
-                                      assignDriver(order.id, e.target.value);
-                                    }
-                                  }}
-                                  className="flex-1 text-sm border-2 border-gray-300 rounded-lg px-3 py-2 bg-white text-gray-900 font-bold hover:border-purple-500 focus:border-purple-600 focus:outline-none focus:ring-2 focus:ring-purple-500/50 transition-all duration-200 cursor-pointer shadow-md"
-                                >
-                                  <option value="">🚗 اختر السائق</option>
-                                  {getDriversForRegion(
-                                    extractRegion(order.address_text ?? "")
-                                  ).map((driver) => (
-                                    <option key={driver.id} value={driver.id}>
-                                      {driver.users?.name ?? "سائق"}{" "}
-                                      {driver.vehicle_info
-                                        ? `- ${driver.vehicle_info}`
-                                        : ""}
-                                    </option>
-                                  ))}
-                                </select>
+                                <FormControl size="small" sx={{ flex: 1, minWidth: 140 }}>
+                                  <InputLabel id={`mobile-driver-label-${order.id}`} sx={{ fontFamily: 'inherit', fontWeight: 'bold', fontSize: '0.875rem', '&.Mui-focused': { color: '#7c3aed' } }}>السائق</InputLabel>
+                                  <MuiSelect
+                                    labelId={`mobile-driver-label-${order.id}`}
+                                    value=""
+                                    label="السائق"
+                                    onChange={(e: SelectChangeEvent) => {
+                                      if (e.target.value) {
+                                        assignDriver(order.id, e.target.value);
+                                      }
+                                    }}
+                                    sx={{
+                                      borderRadius: '0.5rem',
+                                      fontFamily: 'inherit',
+                                      fontWeight: 'bold',
+                                      fontSize: '0.875rem',
+                                      backgroundColor: 'white',
+                                      boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)',
+                                      '& .MuiOutlinedInput-notchedOutline': { borderColor: '#d1d5db', borderWidth: 2 },
+                                      '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#a855f7' },
+                                      '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#7c3aed' },
+                                    }}
+                                    MenuProps={{ disableScrollLock: true, PaperProps: { sx: { borderRadius: '0.75rem', mt: 0.5, boxShadow: '0 10px 25px -5px rgba(0,0,0,0.15)' } } }}
+                                  >
+                                    {getDriversForRegion(
+                                      extractRegion(order.address_text ?? "")
+                                    ).map((driver) => (
+                                      <MuiMenuItem key={driver.id} value={driver.id} sx={{ fontFamily: 'inherit', fontWeight: 'bold', fontSize: '0.875rem' }}>
+                                        {driver.users?.name ?? "سائق"}{" "}
+                                        {driver.vehicle_info
+                                          ? `- ${driver.vehicle_info}`
+                                          : ""}
+                                      </MuiMenuItem>
+                                    ))}
+                                  </MuiSelect>
+                                </FormControl>
                               )}
                             </>
                           )}
@@ -755,30 +868,30 @@ export default function AdminDashboard() {
                   </div>
 
                   {/* Desktop Table */}
-                  <div className="hidden sm:block overflow-x-auto bg-white rounded-lg shadow-lg border-2 border-gray-200">
+                  <div className="hidden sm:block overflow-hidden bg-white rounded-xl shadow-sm border border-gray-100">
                     <table className="min-w-full divide-y divide-gray-200">
-                      <thead className="bg-gradient-to-r from-gray-50 to-gray-100">
+                      <thead className="bg-gray-50/50">
                         <tr>
-                          <th className="px-6 py-3 text-right text-xs font-black text-gray-700 uppercase tracking-wider">
+                          <th className="px-6 py-4 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">
                             الطلب
                           </th>
-                          <th className="px-6 py-3 text-right text-xs font-black text-gray-700 uppercase tracking-wider">
+                          <th className="px-6 py-4 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">
                             العميل
                           </th>
-                          <th className="px-6 py-3 text-right text-xs font-black text-gray-700 uppercase tracking-wider">
+                          <th className="px-6 py-4 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">
                             الحالة
                           </th>
-                          <th className="px-6 py-3 text-right text-xs font-black text-gray-700 uppercase tracking-wider">
+                          <th className="px-6 py-4 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">
                             المجموع
                           </th>
-                          <th className="px-6 py-3 text-right text-xs font-black text-gray-700 uppercase tracking-wider">
+                          <th className="px-6 py-4 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">
                             الإجراءات
                           </th>
                         </tr>
                       </thead>
                       <tbody className="bg-white divide-y divide-gray-200">
                         {filteredOrders.map((order) => (
-                          <tr key={order.id} className="hover:bg-blue-50 transition-colors">
+                          <tr key={order.id} className="hover:bg-gray-50 transition-colors">
                             <td className="px-6 py-4 whitespace-nowrap">
                               <div>
                                 <div className="text-sm font-bold text-gray-900">
@@ -790,7 +903,7 @@ export default function AdminDashboard() {
                               </div>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="text-sm text-gray-900 font-bold">
+                              <div className="text-sm text-gray-900 font-semibold">
                                 {order.users?.name ?? "-"}
                               </div>
                               <div className="text-sm text-gray-600 font-medium">
@@ -799,21 +912,21 @@ export default function AdminDashboard() {
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
                               <span
-                                className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold shadow-md ${order.status === "pending"
-                                  ? "bg-amber-600 text-white"
+                                className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ring-1 ring-inset ${order.status === "pending"
+                                  ? "bg-amber-50 text-amber-700 ring-amber-600/20"
                                   : order.status === "confirmed"
-                                    ? "bg-blue-600 text-white"
+                                    ? "bg-blue-50 text-blue-700 ring-blue-600/20"
                                     : order.status === "on_delivery"
-                                      ? "bg-orange-600 text-white"
+                                      ? "bg-orange-50 text-orange-700 ring-orange-600/20"
                                       : order.status === "delivered"
-                                        ? "bg-emerald-600 text-white"
-                                        : "bg-red-600 text-white"
+                                        ? "bg-emerald-50 text-emerald-700 ring-emerald-600/20"
+                                        : "bg-red-50 text-red-700 ring-red-600/20"
                                   }`}
                               >
                                 {formatOrderStatus(order.status)}
                               </span>
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-emerald-700 font-black">
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-emerald-600 font-bold">
                               {formatCurrency(Number(order.total_price ?? 0))}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
@@ -837,26 +950,42 @@ export default function AdminDashboard() {
                                       تأكيد
                                     </button>
                                     {drivers.length > 0 && (
-                                      <select
-                                        onChange={(e) => {
-                                          if (e.target.value) {
-                                            assignDriver(order.id, e.target.value);
-                                          }
-                                        }}
-                                        className="text-sm border-2 border-gray-300 rounded-lg px-3 py-1.5 bg-white text-gray-900 font-bold hover:border-purple-500 focus:border-purple-600 focus:outline-none focus:ring-2 focus:ring-purple-500/50 transition-all cursor-pointer shadow-md"
-                                      >
-                                        <option value="">🚗 اختر السائق</option>
-                                        {getDriversForRegion(
-                                          extractRegion(order.address_text ?? "")
-                                        ).map((driver) => (
-                                          <option key={driver.id} value={driver.id}>
-                                            {driver.users?.name ?? "سائق"}{" "}
-                                            {driver.vehicle_info
-                                              ? `- ${driver.vehicle_info}`
-                                              : ""}
-                                          </option>
-                                        ))}
-                                      </select>
+                                      <FormControl size="small" sx={{ minWidth: 160 }}>
+                                        <InputLabel id={`desktop-driver-label-${order.id}`} sx={{ fontFamily: 'inherit', fontWeight: 'bold', fontSize: '0.875rem', '&.Mui-focused': { color: '#7c3aed' } }}>السائق</InputLabel>
+                                        <MuiSelect
+                                          labelId={`desktop-driver-label-${order.id}`}
+                                          value=""
+                                          label="السائق"
+                                          onChange={(e: SelectChangeEvent) => {
+                                            if (e.target.value) {
+                                              assignDriver(order.id, e.target.value);
+                                            }
+                                          }}
+                                          sx={{
+                                            borderRadius: '0.5rem',
+                                            fontFamily: 'inherit',
+                                            fontWeight: 'bold',
+                                            fontSize: '0.875rem',
+                                            backgroundColor: 'white',
+                                            boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)',
+                                            '& .MuiOutlinedInput-notchedOutline': { borderColor: '#d1d5db', borderWidth: 2 },
+                                            '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#a855f7' },
+                                            '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#7c3aed' },
+                                          }}
+                                          MenuProps={{ disableScrollLock: true, PaperProps: { sx: { borderRadius: '0.75rem', mt: 0.5, boxShadow: '0 10px 25px -5px rgba(0,0,0,0.15)' } } }}
+                                        >
+                                          {getDriversForRegion(
+                                            extractRegion(order.address_text ?? "")
+                                          ).map((driver) => (
+                                            <MuiMenuItem key={driver.id} value={driver.id} sx={{ fontFamily: 'inherit', fontWeight: 'bold', fontSize: '0.875rem' }}>
+                                              {driver.users?.name ?? "سائق"}{" "}
+                                              {driver.vehicle_info
+                                                ? `- ${driver.vehicle_info}`
+                                                : ""}
+                                            </MuiMenuItem>
+                                          ))}
+                                        </MuiSelect>
+                                      </FormControl>
                                     )}
                                   </>
                                 )}
@@ -885,45 +1014,45 @@ export default function AdminDashboard() {
                       إضافة منتج
                     </Link>
                   </div>
-                  <div className="overflow-x-auto bg-white rounded-lg shadow-lg border-2 border-gray-200">
+                  <div className="overflow-hidden bg-white rounded-xl shadow-sm border border-gray-100">
                     <table className="min-w-full divide-y divide-gray-200">
-                      <thead className="bg-gradient-to-r from-gray-50 to-gray-100">
+                      <thead className="bg-gray-50/50">
                         <tr>
-                          <th className="px-6 py-3 text-left text-xs font-black text-gray-700 uppercase tracking-wider">
+                          <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
                             المنتج
                           </th>
-                          <th className="px-6 py-3 text-left text-xs font-black text-gray-700 uppercase tracking-wider">
+                          <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
                             SKU
                           </th>
-                          <th className="px-6 py-3 text-left text-xs font-black text-gray-700 uppercase tracking-wider">
+                          <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
                             السعر
                           </th>
-                          <th className="px-6 py-3 text-left text-xs font-black text-gray-700 uppercase tracking-wider">
+                          <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
                             المخزون
                           </th>
-                          <th className="px-6 py-3 text-left text-xs font-black text-gray-700 uppercase tracking-wider">
+                          <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
                             الإجراءات
                           </th>
                         </tr>
                       </thead>
                       <tbody className="bg-white divide-y divide-gray-200">
                         {products.map((product) => (
-                          <tr key={product.id} className="hover:bg-blue-50 transition-colors">
+                          <tr key={product.id} className="hover:bg-gray-50 transition-colors">
                             <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="text-sm font-bold text-gray-900">
+                              <div className="text-sm font-semibold text-gray-900">
                                 {product.name}
                               </div>
                               <div className="text-sm text-gray-600 font-medium">
                                 {product.category}
                               </div>
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-bold">
-                              {product.sku}
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-semibold">
+                              {product.sku || "-"}
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-emerald-700 font-black">
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-emerald-600 font-bold">
                               {formatCurrency(product.price)}
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-bold">
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-semibold">
                               {product.stock_estimate}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
@@ -976,37 +1105,37 @@ export default function AdminDashboard() {
                       <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
                     </div>
                   ) : driverReports.length > 0 ? (
-                    <div className="overflow-x-auto bg-white rounded-lg shadow-lg border-2 border-gray-200">
+                    <div className="overflow-hidden bg-white rounded-xl shadow-sm border border-gray-100">
                       <table className="min-w-full divide-y divide-gray-200">
-                        <thead className="bg-gradient-to-r from-gray-50 to-gray-100">
+                        <thead className="bg-gray-50/50">
                           <tr>
-                            <th className="px-6 py-3 text-left text-xs font-black text-gray-700 uppercase">
+                            <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">
                               السائق
                             </th>
-                            <th className="px-6 py-3 text-left text-xs font-black text-gray-700 uppercase">
+                            <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">
                               عدد التوصيلات
                             </th>
-                            <th className="px-6 py-3 text-left text-xs font-black text-gray-700 uppercase">
+                            <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">
                               المكتملة
                             </th>
-                            <th className="px-6 py-3 text-left text-xs font-black text-gray-700 uppercase">
+                            <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">
                               الإجمالي
                             </th>
                           </tr>
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-200">
                           {driverReports.map((report: any) => (
-                            <tr key={report.driver?.id} className="hover:bg-blue-50 transition-colors">
-                              <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900">
+                            <tr key={report.driver?.id} className="hover:bg-gray-50 transition-colors">
+                              <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">
                                 {report.driver?.name || "غير محدد"}
                               </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-bold">
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-semibold">
                                 {report.stats?.total || 0}
                               </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-bold">
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-semibold">
                                 {report.stats?.completed || 0}
                               </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-emerald-700 font-black">
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-emerald-600 font-bold">
                                 {formatCurrency(report.revenue || 0)}
                               </td>
                             </tr>
@@ -1035,99 +1164,6 @@ export default function AdminDashboard() {
                     </h2>
                     <p className="text-gray-700 mt-2 font-medium">إدارة جميع إعدادات المنصة والعمليات</p>
                   </div>
-
-                  {/* Quick Settings Cards */}
-                  <div className="grid md:grid-cols-2 gap-4">
-                    {/* Exchange Rate Card */}
-                    <div className="bg-gradient-to-br from-emerald-50 via-emerald-100 to-green-100 border-2 border-emerald-300 rounded-2xl p-6 shadow-2xl hover:shadow-emerald-500/30 transition-shadow">
-                      <div className="flex items-start justify-between mb-4">
-                        <div className="flex items-center gap-3">
-                          <div className="p-3 bg-emerald-600 rounded-xl shadow-lg">
-                            <DollarSign className="h-6 w-6 text-white" />
-                          </div>
-                          <div>
-                            <h3 className="text-lg font-black text-gray-900">سعر الصرف</h3>
-                            <p className="text-sm text-emerald-800 font-bold">إدارة سعر الدولار</p>
-                          </div>
-                        </div>
-                        <TrendingUp className="h-5 w-5 text-emerald-700" />
-                      </div>
-
-                      {currentRate && (
-                        <div className="bg-white rounded-xl p-4 border-2 border-emerald-300 mb-4 shadow-lg">
-                          <p className="text-sm text-emerald-800 mb-1 font-bold">السعر الحالي</p>
-                          <p className="text-3xl font-black text-emerald-700">
-                            {formatCurrency(currentRate)}
-                          </p>
-                          <p className="text-xs text-gray-600 mt-1 font-medium">لكل 1 دولار</p>
-                        </div>
-                      )}
-
-                      <div className="flex gap-2">
-                        <button
-                          onClick={handleUpdateExchangeRate}
-                          disabled={isUpdatingRate}
-                          className="flex-1 inline-flex items-center justify-center gap-2 bg-emerald-600 text-white px-4 py-3 rounded-xl font-black hover:bg-emerald-700 disabled:opacity-50 transition-all shadow-xl hover:shadow-2xl"
-                        >
-                          {isUpdatingRate ? (
-                            <>
-                              <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
-                              جاري التحديث...
-                            </>
-                          ) : (
-                            <>
-                              <RefreshCcw className="h-4 w-4" />
-                              تحديث السعر
-                            </>
-                          )}
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Price Sync Card */}
-                    <div className="bg-gradient-to-br from-blue-50 via-blue-100 to-indigo-100 border-2 border-blue-300 rounded-2xl p-6 shadow-2xl hover:shadow-blue-500/30 transition-shadow">
-                      <div className="flex items-start justify-between mb-4">
-                        <div className="flex items-center gap-3">
-                          <div className="p-3 bg-blue-600 rounded-xl shadow-lg">
-                            <Zap className="h-6 w-6 text-white" />
-                          </div>
-                          <div>
-                            <h3 className="text-lg font-black text-gray-900">مزامنة الأسعار</h3>
-                            <p className="text-sm text-blue-800 font-bold">تحديث أسعار المنتجات</p>
-                          </div>
-                        </div>
-                        <Sparkles className="h-5 w-5 text-blue-700" />
-                      </div>
-
-                      <div className="bg-white rounded-xl p-4 border-2 border-blue-300 mb-4 shadow-lg">
-                        <p className="text-sm text-blue-800 mb-2 font-bold">
-                          📦 عدد المنتجات: <span className="font-black text-gray-900">{products.length}</span>
-                        </p>
-                        <p className="text-xs text-gray-600 font-medium">
-                          سيتم تحديث جميع المنتجات المسعرة بالدولار
-                        </p>
-                      </div>
-
-                      <button
-                        onClick={handlePricingSync}
-                        disabled={isSyncingPrices}
-                        className="w-full inline-flex items-center justify-center gap-2 bg-blue-600 text-white px-4 py-3 rounded-xl font-black hover:bg-blue-700 disabled:opacity-50 transition-all shadow-xl hover:shadow-2xl"
-                      >
-                        {isSyncingPrices ? (
-                          <>
-                            <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
-                            جاري المزامنة...
-                          </>
-                        ) : (
-                          <>
-                            <RefreshCcw className="h-4 w-4" />
-                            مزامنة الأسعار
-                          </>
-                        )}
-                      </button>
-                    </div>
-                  </div>
-
                   {/* Commission Settings Section */}
                   <div className="bg-gradient-to-br from-purple-50 via-purple-100 to-pink-100 border-2 border-purple-300 rounded-2xl p-6 shadow-2xl">
                     <div className="flex items-center gap-3 mb-6">
@@ -1156,17 +1192,6 @@ export default function AdminDashboard() {
 
                   {/* General Settings - Full Width */}
                   <GeneralSettings />
-
-                  {/* Info Banner */}
-                  <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl p-5 flex items-start gap-4 shadow-2xl border border-blue-400/30">
-                    <Sparkles className="h-6 w-6 flex-shrink-0 mt-1" />
-                    <div>
-                      <h4 className="font-black text-lg mb-1">💡 نصيحة</h4>
-                      <p className="text-blue-100 text-sm font-medium">
-                        تأكد من تحديث سعر الصرف يومياً للحصول على أسعار دقيقة. يتم التحديث التلقائي كل يوم عند الساعة 12 صباحاً.
-                      </p>
-                    </div>
-                  </div>
                 </div>
               )}
             </div>
@@ -1185,6 +1210,6 @@ export default function AdminDashboard() {
           isLoading={isDeleting}
         />
       </div>
-    </ThemeProvider>
+    </ThemeProvider >
   );
 }

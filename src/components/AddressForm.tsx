@@ -136,8 +136,8 @@ export default function AddressForm({
                   setFormData((prev) => ({ ...prev, label: option.value }))
                 }
                 className={`flex flex-col items-center gap-2 p-4 rounded-lg border-2 transition-all font-semibold shadow-sm hover:shadow-md ${formData.label === option.value
-                    ? "border-blue-500 bg-blue-500 text-white"
-                    : "border-gray-300 bg-white text-gray-700 hover:border-blue-300 hover:bg-blue-50"
+                  ? "border-blue-500 bg-blue-500 text-white"
+                  : "border-gray-300 bg-white text-gray-700 hover:border-blue-300 hover:bg-blue-50"
                   }`}
               >
                 <Icon className="h-5 w-5" />
@@ -176,8 +176,8 @@ export default function AddressForm({
             setFormData((prev) => ({ ...prev, street: e.target.value }))
           }
           className={`w-full text-gray-800 font-semibold px-4 py-3 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 text-right shadow-sm transition-all ${errors.street
-              ? "border-red-400 bg-red-50"
-              : "border-gray-300 bg-white hover:border-blue-300"
+            ? "border-red-400 bg-red-50"
+            : "border-gray-300 bg-white hover:border-blue-300"
             }`}
           placeholder="مثال: شارع الكلاسة"
         />
@@ -225,8 +225,8 @@ export default function AddressForm({
           }
           rows={4}
           className={`w-full text-gray-800 font-semibold px-4 py-3 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 text-right shadow-sm transition-all resize-none ${errors.address_details
-              ? "border-red-400 bg-red-50"
-              : "border-gray-300 bg-white hover:border-blue-300"
+            ? "border-red-400 bg-red-50"
+            : "border-gray-300 bg-white hover:border-blue-300"
             }`}
           placeholder="مثال: المبنى 2، الطابق الأول، بجانب الصيدلية"
         />
@@ -302,7 +302,7 @@ export default function AddressForm({
           disabled={!initialData}
           className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-400 transition-all font-bold shadow-md hover:shadow-lg"
         >
-          حفظ العنوان ✓
+          حفظ العنوان
         </button>
       </div>
     </form>

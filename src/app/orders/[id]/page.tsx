@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import Navigation from "@/components/Navigation";
 import { Database } from "@/types/database";
 import { formatCurrency, formatDate } from "@/lib/utils";
@@ -205,11 +206,13 @@ export default function OrderDetailsPage() {
                       >
                         <div className="w-16 h-16 bg-gray-200 rounded-lg overflow-hidden flex-shrink-0">
                           {item.products.image_url ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img
+                            <Image
                               src={item.products.image_url}
                               alt={item.products.name}
+                              width={64}
+                              height={64}
                               className="w-full h-full object-cover"
+                              sizes="64px"
                             />
                           ) : (
                             <div className="w-full h-full flex items-center justify-center">

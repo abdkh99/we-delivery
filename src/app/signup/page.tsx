@@ -3,13 +3,8 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { Package, Eye, EyeOff, WifiOff } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { Package, Eye, EyeOff, Wifi, WifiOff } from "lucide-react";
-import {
-  withRetry,
-  isNetworkError,
-  getNetworkErrorMessage,
-} from "@/lib/network-utils";
 
 export default function SignupPage() {
   const [name, setName] = useState("");
@@ -21,13 +16,13 @@ export default function SignupPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
-  const [passwordStrength, setPasswordStrength] = useState("");
-  const [isRetrying, setIsRetrying] = useState(false);
-  const [retryCount, setRetryCount] = useState(0);
+  const [passwordStrength, setPasswordStrength] = useState({
+    text: "",
+    color: "",
+    bg: "",
+  });
   const [isOnline, setIsOnline] = useState(true);
   const router = useRouter();
-  const supabase = createClient();
 
   // Check online status
   useEffect(() => {
@@ -62,7 +57,6 @@ export default function SignupPage() {
     e.preventDefault();
     setLoading(true);
     setError("");
-    setSuccess("");
 
     // Validation
     if (!name.trim()) {
@@ -140,175 +134,67 @@ export default function SignupPage() {
     }
 
     try {
-      // Check if username is unique with retry logic
-      const { data: existingUser } = await withRetry(
-        async () => {
-          const result = await supabase
-            .from("users")
-            .select("username")
-            .eq("username", username.toLowerCase())
-            .maybeSingle();
-          return result.data;
-        },
-        {
-          maxRetries: 2,
-          timeout: 20000,
-          retryDelay: 1500,
-        },
-        (attempt) => {
-          setIsRetrying(true);
-          setRetryCount(attempt);
-        }
-      );
+      const supabase = createClient();
+      const normalizedUsername = username.toLowerCase();
+      const email = `${normalizedUsername}@estore.local`;
 
-      if (existingUser) {
-        setError("اسم المستخدم محجوز. يرجى اختيار اسم آخر");
-        setLoading(false);
-        return;
-      }
-
-      // Create email from username (Supabase requires email for auth)
-      const generatedEmail = `${username.toLowerCase()}@estore.local`;
-
-      // Sign up with Supabase Auth with retry logic
-      const { data, error } = await withRetry(
-        async () => {
-          const result = await supabase.auth.signUp({
-            email: generatedEmail,
-            password,
-            options: {
-              emailRedirectTo: `${window.location.origin}/auth/callback`,
-              data: {
-                full_name: name,
-                name: name,
-                username: username.toLowerCase(),
-                phone: fullPhone,
-              },
-            },
-          });
-          if (result.error) throw result.error;
-          return result;
-        },
-        {
-          maxRetries: 2,
-          timeout: 30000, // 30 seconds
-          retryDelay: 2000,
-        },
-        (attempt) => {
-          setIsRetrying(true);
-          setRetryCount(attempt);
-        }
-      );
-
-      if (error) {
-        // Better error messages
-        if (error.message.includes("already registered")) {
-          setError("اسم المستخدم مستخدم بالفعل");
-        } else if (error.message.includes("Invalid email")) {
-          setError("حدث خطأ في التسجيل. يرجى المحاولة مرة أخرى");
-        } else {
-          setError(getNetworkErrorMessage(error));
-        }
-        setLoading(false);
-        return;
-      }
-
-      if (data?.user) {
-        // Wait for profile to be created by trigger, with verification
-        let profileReady = false;
-        for (let i = 0; i < 5; i++) {
-          await new Promise((resolve) => setTimeout(resolve, 500));
-          try {
-            const { data: profile } = await supabase
-              .from("users")
-              .select("id")
-              .eq("id", data.user.id)
-              .maybeSingle();
-            if (profile) {
-              profileReady = true;
-              break;
-            }
-          } catch (err) {
-            // Continue retrying
-            console.log("Profile check attempt", i + 1);
-          }
-        }
-
-        if (!profileReady) {
-          // Fallback: create profile manually if trigger failed
-          try {
-            await withRetry(
-              async () => {
-                const result = await supabase.from("users").insert({
-                  id: data.user.id,
-                  name: name,
-                  username: username.toLowerCase(),
-                  phone: fullPhone,
-                  email: `${username.toLowerCase()}@estore.local`,
-                  role: "customer",
-                });
-                if (result.error) throw result.error;
-                return result;
-              },
-              {
-                maxRetries: 2,
-                timeout: 20000,
-                retryDelay: 1500,
-              }
-            );
-          } catch (err) {
-            console.error("Failed to create profile:", err);
-            // Continue anyway - profile might have been created by trigger
-          }
-        }
-
-        // Redirect to home page
-        router.push("/");
-        router.refresh();
-      }
-    } catch (err: unknown) {
-      console.error("Signup error:", err);
-      if (isNetworkError(err)) {
-        setError(getNetworkErrorMessage(err));
-      } else {
-        setError("حدث خطأ غير متوقع. يرجى المحاولة مرة أخرى");
-      }
-    } finally {
-      setLoading(false);
-      setIsRetrying(false);
-      setRetryCount(0);
-    }
-  };
-
-  const handleGoogleSignIn = async () => {
-    setLoading(true);
-    setError("");
-    setSuccess("");
-
-    try {
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: "google",
+      // إنشاء الحساب في Supabase مع تخزين بيانات المستخدم في user_metadata
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
-          queryParams: {
-            access_type: "offline",
-            prompt: "consent",
+          data: {
+            full_name: name.trim(),
+            name: name.trim(),
+            username: normalizedUsername,
+            phone: fullPhone,
+            role: "customer",
           },
         },
       });
 
-      if (error) {
-        if (error.message.includes("popup")) {
-          setError("فشل فتح نافذة تسجيل الدخول بـ Google");
+      if (error || !data?.user) {
+        const message = error?.message || "";
+
+        if (
+          message.toLowerCase().includes("already") ||
+          message.toLowerCase().includes("exists") ||
+          message.includes("User already registered")
+        ) {
+          setError("اسم المستخدم مستخدم بالفعل");
+        } else if (message.toLowerCase().includes("password")) {
+          setError("كلمة المرور لا تستوفي الشروط المطلوبة");
         } else {
-          setError("فشل تسجيل الدخول بـ Google");
+          setError(message || "حدث خطأ أثناء إنشاء الحساب");
         }
-      } else {
-        setSuccess("جاري تحويلك إلى Google...");
+        setLoading(false);
+        return;
       }
+
+      // التأكد من وجود جلسة للمستخدم بعد التسجيل
+      if (!data.session) {
+        const { data: signInData, error: signInError } =
+          await supabase.auth.signInWithPassword({
+            email,
+            password,
+          });
+
+        if (signInError || !signInData?.session) {
+          console.error("Auto sign-in after signup failed:", signInError);
+          setError(
+            "تم إنشاء الحساب بنجاح، لكن فشل تسجيل الدخول التلقائي. يرجى محاولة تسجيل الدخول يدويًا."
+          );
+          setLoading(false);
+          return;
+        }
+      }
+
+      // في حال النجاح نعيد توجيه المستخدم للصفحة الرئيسية
+      router.push("/");
+      router.refresh();
     } catch (err: unknown) {
-      console.error("Google signin error:", err);
-      setError("فشل تسجيل الدخول بـ Google");
+      console.error("Signup error:", err);
+      setError("حدث خطأ غير متوقع. يرجى المحاولة مرة أخرى");
     } finally {
       setLoading(false);
     }
@@ -342,12 +228,6 @@ export default function SignupPage() {
               <div className="mt-4 inline-flex items-center gap-2 px-3 py-1.5 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
                 <WifiOff className="h-4 w-4" />
                 <span>لا يوجد اتصال بالإنترنت</span>
-              </div>
-            )}
-            {isRetrying && (
-              <div className="mt-4 inline-flex items-center gap-2 px-3 py-1.5 bg-yellow-50 border border-yellow-200 rounded-lg text-yellow-700 text-sm">
-                <Wifi className="h-4 w-4 animate-pulse" />
-                <span>جاري إعادة المحاولة... ({retryCount}/2)</span>
               </div>
             )}
           </div>
@@ -480,8 +360,8 @@ export default function SignupPage() {
                             passwordStrength.text === "ضعيفة"
                               ? "33%"
                               : passwordStrength.text === "متوسطة"
-                              ? "66%"
-                              : "100%",
+                                ? "66%"
+                                : "100%",
                         }}
                       ></div>
                     </div>
@@ -554,32 +434,6 @@ export default function SignupPage() {
               </div>
             )}
 
-            {/* Success Message */}
-            {success && (
-              <div className="rounded-xl bg-green-50 p-4 border border-green-100 animate-in fade-in slide-in-from-top-2">
-                <div className="flex">
-                  <div className="flex-shrink-0">
-                    <svg
-                      className="h-5 w-5 text-green-400"
-                      viewBox="0 0 20 20"
-                      fill="currentColor"
-                    >
-                      <path
-                        fillRule="evenodd"
-                        d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                  </div>
-                  <div className="mr-3">
-                    <h3 className="text-sm font-medium text-green-800">
-                      {success}
-                    </h3>
-                  </div>
-                </div>
-              </div>
-            )}
-
             {/* Submit Button */}
             <div>
               <button
@@ -609,9 +463,7 @@ export default function SignupPage() {
                         d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                       ></path>
                     </svg>
-                    {isRetrying
-                      ? "جاري إعادة المحاولة..."
-                      : "جاري إنشاء الحساب..."}
+                    جاري إنشاء الحساب...
                   </>
                 ) : !isOnline ? (
                   <>
@@ -624,48 +476,6 @@ export default function SignupPage() {
               </button>
             </div>
           </form>
-
-          {/* Divider */}
-          <div className="mt-8">
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-200"></div>
-              </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-white text-gray-500">
-                  أو سجل الدخول عبر
-                </span>
-              </div>
-            </div>
-
-            <div className="mt-6">
-              <button
-                onClick={handleGoogleSignIn}
-                disabled={loading}
-                className="w-full flex justify-center items-center px-4 py-3 border border-gray-300 shadow-sm text-sm font-medium rounded-xl text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
-              >
-                <svg className="h-5 w-5 ml-2" viewBox="0 0 24 24">
-                  <path
-                    d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                    fill="#4285F4"
-                  />
-                  <path
-                    d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                    fill="#34A853"
-                  />
-                  <path
-                    d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-                    fill="#FBBC05"
-                  />
-                  <path
-                    d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-                    fill="#EA4335"
-                  />
-                </svg>
-                Google
-              </button>
-            </div>
-          </div>
 
           <div className="mt-8 text-center">
             <p className="text-sm text-gray-600">

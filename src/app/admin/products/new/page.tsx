@@ -1,5 +1,7 @@
 "use client";
 
+const SESSION_KEY = "admin_product_form_backup";
+
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
@@ -25,6 +27,7 @@ export default function AddProductPage() {
   const [pricingMode, setPricingMode] = useState<"usd" | "syp">("usd");
   const [hasFlavors, setHasFlavors] = useState(false);
   const [flavors, setFlavors] = useState<Flavor[]>([]);
+  const [isLoaded, setIsLoaded] = useState(false);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -39,6 +42,37 @@ export default function AddProductPage() {
 
   const [rateInfo, setRateInfo] = useState<any>(null);
   const [rateLoading, setRateLoading] = useState(false);
+
+  // استعادة البيانات المحفوظة عند التحميل
+  useEffect(() => {
+    const saved = sessionStorage.getItem(SESSION_KEY);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        setFormData(parsed.formData);
+        setFlavors(parsed.flavors);
+        setHasFlavors(parsed.hasFlavors);
+        setPricingMode(parsed.pricingMode);
+        toast.info("تم استعادة البيانات غير المحفوظة");
+      } catch (e) {
+        console.error("Failed to restore backup", e);
+      }
+    }
+    setIsLoaded(true);
+  }, []);
+
+  // حفظ البيانات تلقائياً عند التغيير
+  useEffect(() => {
+    if (!isLoaded) return;
+
+    const backup = {
+      formData,
+      flavors,
+      hasFlavors,
+      pricingMode,
+    };
+    sessionStorage.setItem(SESSION_KEY, JSON.stringify(backup));
+  }, [formData, flavors, hasFlavors, pricingMode, isLoaded]);
 
   // جلب سعر اليوم
   useEffect(() => {
@@ -94,8 +128,8 @@ export default function AddProductPage() {
   ];
 
   const addFlavor = () => {
-    setFlavors([
-      ...flavors,
+    setFlavors((prev) => [
+      ...prev,
       {
         id: `temp-${Date.now()}`,
         name: "",
@@ -107,12 +141,12 @@ export default function AddProductPage() {
   };
 
   const removeFlavor = (id: string) => {
-    setFlavors(flavors.filter((f) => f.id !== id));
+    setFlavors((prev) => prev.filter((f) => f.id !== id));
   };
 
   const updateFlavor = (id: string, field: keyof Flavor, value: any) => {
-    setFlavors(
-      flavors.map((f) => (f.id === id ? { ...f, [field]: value } : f))
+    setFlavors((prev) =>
+      prev.map((f) => (f.id === id ? { ...f, [field]: value } : f))
     );
   };
 
@@ -215,6 +249,10 @@ export default function AddProductPage() {
       }
 
       console.log("✅ Success:", data);
+
+      // مسح البيانات المحفوظة بعد النجاح
+      sessionStorage.removeItem(SESSION_KEY);
+
       toast.success("تم إضافة المنتج بنجاح! ✅");
       router.push("/admin");
     } catch (error) {
@@ -230,7 +268,8 @@ export default function AddProductPage() {
       HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
     >
   ) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   if (!user || profile?.role !== "admin") {
@@ -548,7 +587,7 @@ export default function AddProductPage() {
               </label>
               <ImageUploader
                 value={formData.image_url}
-                onChange={(url) => setFormData({ ...formData, image_url: url })}
+                onChange={(url) => setFormData((prev) => ({ ...prev, image_url: url }))}
               />
             </div>
 
@@ -667,18 +706,15 @@ export default function AddProductPage() {
                             <label className="block text-sm font-bold text-gray-700 mb-2">
                               رابط الصورة
                             </label>
-                            <input
-                              type="url"
+                            <ImageUploader
                               value={flavor.image_url}
-                              onChange={(e) =>
+                              onChange={(url) =>
                                 updateFlavor(
                                   flavor.id,
                                   "image_url",
-                                  e.target.value
+                                  url
                                 )
                               }
-                              className="w-full border-2 border-gray-300 rounded-lg px-3 py-2.5 text-gray-900 font-medium bg-white focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
-                              placeholder="https://..."
                             />
                           </div>
                         </div>

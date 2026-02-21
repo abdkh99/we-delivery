@@ -3,9 +3,10 @@ import { NextResponse } from "next/server";
 
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  props: { params: Promise<{ id: string }> }
 ) {
   try {
+    const params = await props.params;
     const supabase = await createClient();
     const productId = params.id;
 
@@ -15,23 +16,17 @@ export async function GET(
       .select(
         `
         *,
-        product_flavors (
-          id,
-          product_id,
-          name,
-          name_ar,
-          image_url,
-          stock_estimate,
-          display_order,
-          is_active
-        ),
         product_variants (
           id,
           master_product_id,
           variant_name,
           variant_sku,
           price,
+          usd_price,
           stock_estimate,
+          image_url,
+          description,
+          display_order,
           is_active
         )
       `
@@ -45,9 +40,9 @@ export async function GET(
     }
 
     // ترتيب النكهات حسب display_order
-    if (product.product_flavors) {
-      product.product_flavors.sort(
-        (a, b) => (a.display_order || 0) - (b.display_order || 0)
+    if (product.product_variants) {
+      product.product_variants.sort(
+        (a: any, b: any) => (a.display_order || 0) - (b.display_order || 0)
       );
     }
 
