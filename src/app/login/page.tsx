@@ -55,7 +55,7 @@ export default function LoginPage() {
 
     try {
       const supabase = createClient();
-      const email = `${username.toLowerCase()}@estore.local`;
+      const email = `${username.trim().toLowerCase()}@estore.local`;
 
       const { data, error } = await supabase.auth.signInWithPassword({
         email,

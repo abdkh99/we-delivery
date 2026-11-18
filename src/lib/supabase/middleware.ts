@@ -10,8 +10,8 @@ export async function updateSession(request: NextRequest) {
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
   if (!url || !key) {
-    console.warn(
-      "Supabase URL and Key are not configured. Please set up your .env.local file."
+    console.error(
+      "Supabase URL and Key are not configured (NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY)."
     );
     return supabaseResponse;
   }
