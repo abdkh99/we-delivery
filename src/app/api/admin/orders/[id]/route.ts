@@ -259,24 +259,6 @@ export async function PATCH(
               console.log(`✅ Returned ${item.qty} units to variant ${item.variant_id}`);
             }
           }
-          
-          // إذا كان هناك flavor، أعد مخزونه أيضاً
-          if (item.flavor_id) {
-            const { data: flavor } = await supabase
-              .from("product_flavors")
-              .select("stock_estimate")
-              .eq("id", item.flavor_id)
-              .single();
-            
-            if (flavor) {
-              const newFlavorStock = (flavor.stock_estimate || 0) + item.qty;
-              await supabase
-                .from("product_flavors")
-                .update({ stock_estimate: newFlavorStock })
-                .eq("id", item.flavor_id);
-              console.log(`✅ Returned ${item.qty} units to flavor ${item.flavor_id}`);
-            }
-          }
         }
       }
     }

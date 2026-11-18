@@ -1,0 +1,9 @@
+-- Hardening of SECURITY DEFINER functions that authenticated users can still execute.
+-- Full function bodies live in the database (applied via migration `harden_points_and_admin_functions`).
+-- Summary of changes:
+--   admin_cancel_order_with_refund : caller (auth.uid()) must equal p_admin_user_id AND be role 'admin' (service_role trusted)
+--   award_points_on_delivery       : only admin / the order's assigned driver / service_role; points capped to
+--                                    floor((total_price - delivery_fee) / 10000), same formula as the app
+--   deduct_points_mixed_payment    : only for your own user id, amount > 0, order must belong to the user
+--   validate_mixed_payment         : only for your own user id (no leaking other users' points)
+-- Use `pg_get_functiondef('public.<name>'::regproc)` to read the current definitions.

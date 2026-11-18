@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 
 export async function GET() {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
 
     // Get the current user
     const { data: { user }, error: userError } = await supabase.auth.getUser();
@@ -17,7 +17,7 @@ export async function GET() {
 
     // Get user profile
     const { data: profile, error: profileError } = await supabase
-      .from('profiles')
+      .from('users')
       .select('*')
       .eq('id', user.id)
       .single();
@@ -54,7 +54,7 @@ export async function GET() {
     const { data: recommendedProducts, error: productsError } = await supabase
       .from('products')
       .select('*')
-      .eq('is_available', true)
+      .eq('is_active', true)
       .order('created_at', { ascending: false })
       .limit(4);
 

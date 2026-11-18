@@ -71,8 +71,10 @@ export default function SignupPage() {
       return;
     }
 
-    if (username.length < 3) {
-      setError("اسم المستخدم يجب أن يكون 3 أحرف على الأقل");
+    if (!/^[a-zA-Z0-9_]{3,30}$/.test(username.trim())) {
+      setError(
+        "اسم المستخدم يجب أن يكون من 3 إلى 30 حرفاً، بأحرف إنجليزية وأرقام وشرطة سفلية (_) فقط، بدون مسافات"
+      );
       setLoading(false);
       return;
     }
@@ -135,7 +137,7 @@ export default function SignupPage() {
 
     try {
       const supabase = createClient();
-      const normalizedUsername = username.toLowerCase();
+      const normalizedUsername = username.trim().toLowerCase();
       const email = `${normalizedUsername}@estore.local`;
 
       // إنشاء الحساب في Supabase مع تخزين بيانات المستخدم في user_metadata
