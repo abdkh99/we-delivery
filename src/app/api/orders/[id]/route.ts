@@ -108,44 +108,27 @@ export async function PATCH(
       );
     }
 
-    // ✅ Simple cancellation - update order status
-    const { error: updateError } = await supabase
-      .from("orders")
-      .update({ status: "cancelled" })
-      .eq("id", id)
-      .eq("user_id", user.id);
+    // ✅ Cancel atomically in the database (status + delivery + points refund + stock restore).
+    // Customers have no UPDATE policy on `orders`, so this must go through the SECURITY DEFINER function.
+    const { data: cancelResult, error: cancelError } = await supabase.rpc(
+      "customer_cancel_order",
+      { p_order_id: id }
+    );
 
-    if (updateError) {
-      console.error("Error cancelling order:", updateError);
+    const cancel = Array.isArray(cancelResult) ? cancelResult[0] : cancelResult;
+
+    if (cancelError || !cancel?.success) {
+      console.error("Error cancelling order:", cancelError || cancel);
       return NextResponse.json(
         {
           error: "Failed to cancel order",
-          details: updateError.message,
+          details: cancelError?.message || cancel?.message,
         },
-        { status: 500 }
+        { status: cancelError ? 500 : 400 }
       );
     }
 
-    // ✅ Refund points if they were used
-    const { data: orderData } = await supabase
-      .from("orders")
-      .select("points_used")
-      .eq("id", id)
-      .single();
-
-    let refundedPoints = 0;
-    if (orderData?.points_used > 0) {
-      const { error: pointsError } = await supabase
-        .from("users")
-        .update({
-          points: supabase.raw(`points + ${orderData.points_used}`)
-        })
-        .eq("id", user.id);
-
-      if (!pointsError) {
-        refundedPoints = orderData.points_used;
-      }
-    }
+    const refundedPoints: number = cancel.refunded_points ?? 0;
 
     console.log("✅ Order cancelled successfully:", id);
     console.log("✅ Points refunded:", refundedPoints);

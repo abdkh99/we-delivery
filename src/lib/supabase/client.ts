@@ -30,55 +30,12 @@ export function createClient() {
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
   if (!url || !key) {
-    console.warn(
-      "Supabase URL and Key are not configured. Please set up your .env.local file."
+    // Fail loudly: a silent mock client made the site render empty pages
+    // (no products, "Supabase not configured") instead of showing the real problem.
+    throw new Error(
+      "Missing NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY. " +
+        "Set them in .env.local (local) or Vercel > Settings > Environment Variables, then redeploy."
     );
-    // Return a mock client for development
-    return {
-      auth: {
-        getUser: () => Promise.resolve({ data: { user: null }, error: null }),
-        signInWithPassword: () =>
-          Promise.resolve({
-            data: { user: null },
-            error: { message: "Supabase not configured" },
-          }),
-        signUp: () =>
-          Promise.resolve({
-            data: { user: null },
-            error: { message: "Supabase not configured" },
-          }),
-        signOut: () => Promise.resolve({ error: null }),
-        onAuthStateChange: () => ({
-          data: { subscription: { unsubscribe: () => { } } },
-        }),
-        exchangeCodeForSession: () =>
-          Promise.resolve({
-            data: { user: null, session: null },
-            error: { message: "Supabase not configured" },
-          }),
-      },
-      from: () => ({
-        select: () => ({
-          eq: () => ({
-            single: () =>
-              Promise.resolve({
-                data: null,
-                error: { message: "Supabase not configured" },
-              }),
-          }),
-          order: () => Promise.resolve({ data: [], error: null }),
-        }),
-        insert: () =>
-          Promise.resolve({
-            data: null,
-            error: { message: "Supabase not configured" },
-          }),
-        update: () => ({
-          eq: () =>
-            Promise.resolve({ error: { message: "Supabase not configured" } }),
-        }),
-      }),
-    } as ReturnType<typeof createBrowserClient>;
   }
 
   // 🔥 FIX: Create client with custom fetch that has timeout

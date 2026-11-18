@@ -61,6 +61,7 @@ export interface Database {
           price_updated_at: string;
           created_at: string;
           updated_at: string;
+          has_variants: boolean;
         };
         Insert: {
           id?: string;
@@ -77,6 +78,7 @@ export interface Database {
           price_updated_at?: string;
           created_at?: string;
           updated_at?: string;
+          has_variants?: boolean;
         };
         Update: {
           id?: string;
@@ -93,6 +95,7 @@ export interface Database {
           price_updated_at?: string;
           created_at?: string;
           updated_at?: string;
+          has_variants?: boolean;
         };
       };
       product_variants: {
@@ -224,6 +227,10 @@ export interface Database {
           qty: number;
           price_at_order: number;
           created_at: string;
+          variant_id: string | null;
+          payment_method: string;
+          stock_restored: boolean;
+          stock_restored_at: string | null;
         };
         Insert: {
           id?: string;
@@ -232,6 +239,10 @@ export interface Database {
           qty: number;
           price_at_order: number;
           created_at?: string;
+          variant_id?: string | null;
+          payment_method?: string;
+          stock_restored?: boolean;
+          stock_restored_at?: string | null;
         };
         Update: {
           id?: string;
@@ -240,6 +251,10 @@ export interface Database {
           qty?: number;
           price_at_order?: number;
           created_at?: string;
+          variant_id?: string | null;
+          payment_method?: string;
+          stock_restored?: boolean;
+          stock_restored_at?: string | null;
         };
       };
       deliveries: {
