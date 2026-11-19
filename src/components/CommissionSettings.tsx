@@ -186,13 +186,13 @@ export default function CommissionSettings() {
               width: 48,
               height: 48,
               borderRadius: 2,
-              background: "linear-gradient(135deg, #7c3aed 0%, #a855f7 100%)",
+              background: "#fbf6cf",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
             }}
           >
-            <PercentIcon sx={{ color: "white", fontSize: 24 }} />
+            <PercentIcon sx={{ color: "#6f5d0c", fontSize: 24 }} />
           </Box>
         }
         title={
@@ -211,13 +211,16 @@ export default function CommissionSettings() {
             startIcon={<AddIcon />}
             onClick={() => handleOpenDialog()}
             sx={{
-              background: "linear-gradient(135deg, #7c3aed 0%, #a855f7 100%)",
+              background: "#f3e78f",
+ color: "#6f5d0c",
+ boxShadow: "none",
               borderRadius: 2,
               textTransform: "none",
               fontWeight: "bold",
               px: 3,
               "&:hover": {
-                background: "linear-gradient(135deg, #6d28d9 0%, #9333ea 100%)",
+                background: "#ecdd77",
+ boxShadow: "none",
               },
             }}
           >
@@ -343,13 +346,13 @@ export default function CommissionSettings() {
                 width: 40,
                 height: 40,
                 borderRadius: 2,
-                background: "linear-gradient(135deg, #7c3aed 0%, #a855f7 100%)",
+                background: "#fbf6cf",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
               }}
             >
-              {editingId ? <EditIcon sx={{ color: "white" }} /> : <AddIcon sx={{ color: "white" }} />}
+              {editingId ? <EditIcon sx={{ color: "#6f5d0c" }} /> : <AddIcon sx={{ color: "#6f5d0c" }} />}
             </Box>
             <Typography variant="h6" fontWeight="bold">
               {editingId ? "تعديل شريحة العمولة" : "إضافة شريحة جديدة"}
@@ -412,12 +415,15 @@ export default function CommissionSettings() {
             disabled={saving}
             startIcon={saving ? <CircularProgress size={20} color="inherit" /> : <SaveIcon />}
             sx={{
-              background: "linear-gradient(135deg, #7c3aed 0%, #a855f7 100%)",
+              background: "#f3e78f",
+ color: "#6f5d0c",
+ boxShadow: "none",
               textTransform: "none",
               fontWeight: "bold",
               px: 3,
               "&:hover": {
-                background: "linear-gradient(135deg, #6d28d9 0%, #9333ea 100%)",
+                background: "#ecdd77",
+ boxShadow: "none",
               },
             }}
           >

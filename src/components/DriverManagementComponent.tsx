@@ -205,7 +205,7 @@ export default function DriverManagementComponent() {
           </div>
           <button
             onClick={() => setIsAddModalOpen(true)}
-            className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 font-bold shadow-md transition-all"
+            className="adm-btn adm-btn-blue gap-2 px-4 py-2"
           >
             <Truck className="h-4 w-4" />
             إضافة سائق جديد
@@ -216,7 +216,7 @@ export default function DriverManagementComponent() {
       {/* Add Driver Modal */}
       {isAddModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in duration-200">
+          <div className="bg-white rounded-2xl border border-[#e7e5df] shadow-[0_8px_30px_rgba(31,36,48,0.12)] w-full max-w-lg overflow-hidden animate-in fade-in zoom-in duration-200">
             <div className="p-6 border-b bg-gray-50 flex justify-between items-center">
               <h3 className="text-xl font-bold text-gray-900">إضافة سائق جديد</h3>
               <button
@@ -237,11 +237,11 @@ export default function DriverManagementComponent() {
                     placeholder="ابحث بالاسم أو رقم الهاتف..."
                     value={userSearchQuery}
                     onChange={(e) => setUserSearchQuery(e.target.value)}
-                    className="w-full px-4 py-2 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
+                    className="w-full px-4 py-2 border border-[#e7e5df] rounded-xl focus:border-[#7fb9dc] focus:ring-2 focus:ring-[#dcedf8] outline-none transition-all"
                   />
                   {isSearching && (
                     <div className="absolute left-3 top-3">
-                      <div className="animate-spin rounded-full h-4 w-4 border-2 border-blue-500 border-t-transparent"></div>
+                      <div className="animate-spin rounded-full h-4 w-4 border-2 border-[#7fb9dc] border-t-transparent"></div>
                     </div>
                   )}
                 </div>
@@ -308,7 +308,7 @@ export default function DriverManagementComponent() {
                       placeholder="مثال: كيا ريو - بيضاء - 123456"
                       value={newDriverForm.vehicle_info}
                       onChange={(e) => setNewDriverForm({ ...newDriverForm, vehicle_info: e.target.value })}
-                      className="w-full px-4 py-2 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
+                      className="w-full px-4 py-2 border border-[#e7e5df] rounded-xl focus:border-[#7fb9dc] focus:ring-2 focus:ring-[#dcedf8] outline-none transition-all"
                     />
                   </div>
                 </div>
@@ -325,11 +325,11 @@ export default function DriverManagementComponent() {
               <button
                 onClick={handleCreateDriver}
                 disabled={!selectedUser || !newDriverForm.vehicle_info || isCreating}
-                className="px-6 py-2 rounded-xl font-bold bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg transition-all flex items-center gap-2"
+                className="adm-btn adm-btn-blue gap-2 px-6 py-2 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isCreating ? (
                   <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-[#1f4e6b] border-t-transparent"></div>
                     جاري الإضافة...
                   </>
                 ) : (
