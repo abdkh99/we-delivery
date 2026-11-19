@@ -127,13 +127,13 @@ export default function GeneralSettings() {
                             width: 48,
                             height: 48,
                             borderRadius: 2,
-                            background: "linear-gradient(135deg, #64748b 0%, #94a3b8 100%)",
+                            background: "#dcedf8",
                             display: "flex",
                             alignItems: "center",
                             justifyContent: "center",
                         }}
                     >
-                        <SettingsIcon sx={{ color: "white", fontSize: 24 }} />
+                        <SettingsIcon sx={{ color: "#1f4e6b", fontSize: 24 }} />
                     </Box>
                 }
                 title={
@@ -298,13 +298,16 @@ export default function GeneralSettings() {
                         disabled={saving}
                         startIcon={saving ? <CircularProgress size={20} color="inherit" /> : <SaveIcon />}
                         sx={{
-                            background: "linear-gradient(135deg, #64748b 0%, #94a3b8 100%)",
+                            background: "#a9d3ea",
+ color: "#1f4e6b",
+ boxShadow: "none",
                             textTransform: "none",
                             fontWeight: "bold",
                             py: 1.5,
                             borderRadius: 2,
                             "&:hover": {
-                                background: "linear-gradient(135deg, #475569 0%, #64748b 100%)",
+                                background: "#93c6e2",
+ boxShadow: "none",
                             },
                         }}
                     >

@@ -8,10 +8,10 @@ import { createClient } from "@/lib/supabase/client";
 
 // أنماط مشتركة لحقول الإدخال والأزرار
 const inputBase =
-  "block w-full border border-gray-300 bg-white px-3.5 py-2.5 text-sm text-gray-900 placeholder-gray-400 outline-none transition-colors focus:border-blue-600 focus:ring-1 focus:ring-blue-600";
+  "block w-full border border-gray-300 bg-white px-3.5 py-2.5 text-sm lg:px-4 lg:py-3 lg:text-base text-gray-900 placeholder-gray-400 outline-none transition-colors focus:border-blue-600 focus:ring-1 focus:ring-blue-600";
 const inputClass = `${inputBase} rounded-lg`;
 const primaryButtonClass =
-  "flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60";
+  "flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm lg:py-3 lg:text-base font-semibold text-white transition-colors hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60";
 
 export default function SignupPage() {
   const [name, setName] = useState("");
@@ -211,32 +211,32 @@ export default function SignupPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4 py-12">
-      <div className="w-full max-w-md">
-        <p className="mb-6 text-center text-xl font-bold text-blue-600">
+      <div className="w-full max-w-md lg:max-w-lg">
+        <p className="mb-6 lg:mb-8 text-center text-xl lg:text-3xl font-bold text-blue-600">
           We Delivery
         </p>
 
-        <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm sm:p-8">
-          <h1 className="text-xl font-bold text-gray-900">إنشاء حساب جديد</h1>
-          <p className="mt-1 text-sm text-gray-500">
+        <div className="rounded-xl lg:rounded-2xl border border-gray-200 bg-white p-6 shadow-sm sm:p-8 lg:p-10">
+          <h1 className="text-xl lg:text-2xl font-bold text-gray-900">إنشاء حساب جديد</h1>
+          <p className="mt-1 text-sm lg:text-base text-gray-500">
             أدخل بياناتك لإنشاء حسابك
           </p>
 
           {!isOnline && (
             <div
               role="alert"
-              className="mt-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700"
+              className="mt-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm lg:text-base text-red-700"
             >
               لا يوجد اتصال بالإنترنت
             </div>
           )}
 
-          <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
+          <form className="mt-6 lg:mt-8 space-y-4 lg:space-y-5" onSubmit={handleSubmit}>
             {/* الاسم الكامل */}
             <div>
               <label
                 htmlFor="name"
-                className="mb-1.5 block text-sm font-medium text-gray-700"
+                className="mb-1.5 block text-sm lg:text-base font-medium text-gray-700"
               >
                 الاسم الكامل
               </label>
@@ -257,7 +257,7 @@ export default function SignupPage() {
             <div>
               <label
                 htmlFor="username"
-                className="mb-1.5 block text-sm font-medium text-gray-700"
+                className="mb-1.5 block text-sm lg:text-base font-medium text-gray-700"
               >
                 اسم المستخدم
               </label>
@@ -276,7 +276,7 @@ export default function SignupPage() {
                   )
                 }
               />
-              <p className="mt-1.5 text-xs text-gray-500">
+              <p className="mt-1.5 text-xs lg:text-sm text-gray-500">
                 أحرف إنجليزية وأرقام وشرطة سفلية فقط، من 3 إلى 30 حرفاً
               </p>
             </div>
@@ -285,12 +285,12 @@ export default function SignupPage() {
             <div>
               <label
                 htmlFor="phone"
-                className="mb-1.5 block text-sm font-medium text-gray-700"
+                className="mb-1.5 block text-sm lg:text-base font-medium text-gray-700"
               >
                 رقم الهاتف
               </label>
               <div className="flex" dir="ltr">
-                <span className="inline-flex items-center rounded-l-lg border border-r-0 border-gray-300 bg-gray-50 px-3 text-sm text-gray-500">
+                <span className="inline-flex items-center rounded-l-lg border border-r-0 border-gray-300 bg-gray-50 px-3 text-sm lg:px-4 lg:text-base text-gray-500">
                   +963
                 </span>
                 <input
@@ -314,7 +314,7 @@ export default function SignupPage() {
             <div>
               <label
                 htmlFor="password"
-                className="mb-1.5 block text-sm font-medium text-gray-700"
+                className="mb-1.5 block text-sm lg:text-base font-medium text-gray-700"
               >
                 كلمة المرور
               </label>
@@ -325,7 +325,7 @@ export default function SignupPage() {
                   type={showPassword ? "text" : "password"}
                   required
                   autoComplete="new-password"
-                  className={`${inputClass} pl-10`}
+                  className={`${inputClass} pl-10 lg:pl-12`}
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => {
@@ -342,9 +342,9 @@ export default function SignupPage() {
                   }
                 >
                   {showPassword ? (
-                    <EyeOff className="h-4 w-4" />
+                    <EyeOff className="h-4 w-4 lg:h-5 lg:w-5" />
                   ) : (
-                    <Eye className="h-4 w-4" />
+                    <Eye className="h-4 w-4 lg:h-5 lg:w-5" />
                   )}
                 </button>
               </div>
@@ -364,12 +364,12 @@ export default function SignupPage() {
                       }}
                     />
                   </div>
-                  <span className={`text-xs ${passwordStrength.color}`}>
+                  <span className={`text-xs lg:text-sm ${passwordStrength.color}`}>
                     {passwordStrength.text}
                   </span>
                 </div>
               ) : (
-                <p className="mt-1.5 text-xs text-gray-500">
+                <p className="mt-1.5 text-xs lg:text-sm text-gray-500">
                   8 أحرف على الأقل، وتحتوي على حرف كبير وحرف صغير ورقم
                 </p>
               )}
@@ -379,7 +379,7 @@ export default function SignupPage() {
             <div>
               <label
                 htmlFor="confirmPassword"
-                className="mb-1.5 block text-sm font-medium text-gray-700"
+                className="mb-1.5 block text-sm lg:text-base font-medium text-gray-700"
               >
                 تأكيد كلمة المرور
               </label>
@@ -390,7 +390,7 @@ export default function SignupPage() {
                   type={showConfirmPassword ? "text" : "password"}
                   required
                   autoComplete="new-password"
-                  className={`${inputClass} pl-10`}
+                  className={`${inputClass} pl-10 lg:pl-12`}
                   placeholder="••••••••"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
@@ -406,9 +406,9 @@ export default function SignupPage() {
                   }
                 >
                   {showConfirmPassword ? (
-                    <EyeOff className="h-4 w-4" />
+                    <EyeOff className="h-4 w-4 lg:h-5 lg:w-5" />
                   ) : (
-                    <Eye className="h-4 w-4" />
+                    <Eye className="h-4 w-4 lg:h-5 lg:w-5" />
                   )}
                 </button>
               </div>
@@ -417,7 +417,7 @@ export default function SignupPage() {
             {error && (
               <div
                 role="alert"
-                className="rounded-lg border border-red-200 bg-red-50 px-3 py-2.5 text-sm text-red-700"
+                className="rounded-lg border border-red-200 bg-red-50 px-3 py-2.5 text-sm lg:text-base text-red-700"
               >
                 {error}
               </div>
@@ -442,7 +442,7 @@ export default function SignupPage() {
           </form>
         </div>
 
-        <p className="mt-6 text-center text-sm text-gray-600">
+        <p className="mt-6 text-center text-sm lg:text-base text-gray-600">
           لديك حساب بالفعل؟{" "}
           <Link
             href="/login"

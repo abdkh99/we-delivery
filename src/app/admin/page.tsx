@@ -55,11 +55,11 @@ const adminTheme = createTheme(
   {
     direction: "rtl",
     palette: {
-      primary: { main: "#4f46e5" },
-      secondary: { main: "#7c3aed" },
-      success: { main: "#059669" },
-      warning: { main: "#d97706" },
-      error: { main: "#dc2626" },
+      primary: { main: "#2d6a8f" },
+      secondary: { main: "#2f7a3b" },
+      success: { main: "#2f7a3b" },
+      warning: { main: "#8a7413" },
+      error: { main: "#a13a3a" },
     },
     typography: {
       fontFamily: '"Tajawal", "Roboto", sans-serif',
@@ -347,11 +347,11 @@ export default function AdminDashboard() {
   // عرض loading أثناء تحميل البيانات
   if (authLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-purple-50">
+      <div className="min-h-screen adm">
         <Navigation />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="flex items-center justify-center h-64">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#7fb9dc]"></div>
           </div>
         </div>
       </div>
@@ -360,7 +360,7 @@ export default function AdminDashboard() {
 
   if (loading && !orders.length && !products.length) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-purple-50">
+      <div className="min-h-screen adm">
         <Navigation />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "60vh" }}>
@@ -373,7 +373,7 @@ export default function AdminDashboard() {
 
   if (!user || profile?.role !== "admin") {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-purple-50">
+      <div className="min-h-screen adm">
         <Navigation />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="text-center">
@@ -391,11 +391,11 @@ export default function AdminDashboard() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-purple-50">
+      <div className="min-h-screen adm">
         <Navigation />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="flex items-center justify-center h-64">
-            <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
+            <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-[#7fb9dc]"></div>
           </div>
         </div>
       </div>
@@ -461,23 +461,23 @@ export default function AdminDashboard() {
 
   return (
     <ThemeProvider theme={adminTheme}>
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-purple-50">
+      <div className="min-h-screen adm">
         <Navigation />
 
         <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8 py-4 sm:py-6 lg:py-8 space-y-6">
           {/* Enhanced Header with Gradient */}
-          <div className=" to-indigo-700 text-black rounded-3xl p-6 sm:p-8 shadow-2xl border border-blue-400/20">
+          <div className="adm-card adm-tint-blue p-6 sm:p-8">
             <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
               <div>
-                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-500/20 backdrop-blur-sm text-black text-sm font-bold shadow-lg border border-white/30">
+                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/70 text-[#1f4e6b] text-sm font-semibold">
                   <Sparkles className="h-4 w-4" />
                   لوحة الإدارة المتقدمة
                 </div>
-                <h1 className="text-2xl sm:text-3xl font-black mt-3 drop-shadow-lg">
+                <h1 className="text-2xl sm:text-3xl font-bold mt-3 text-[#1f2430]">
                   أهلاً {profile?.name || "مدير"}، إدارة جميع عمليات المتجر في
                   مكان واحد
                 </h1>
-                <p className="text-sm sm:text-base text-black mt-2 font-medium">
+                <p className="text-sm sm:text-base text-[#4b5563] mt-2">
                   تابع الطلبات، حدّث الأسعار، وفعّل السائقين الفاعلين في الوقت
                   الحقيقي.
                 </p>
@@ -487,64 +487,64 @@ export default function AdminDashboard() {
 
           {/* Stats Cards */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
-            <div className="bg-white rounded-xl shadow-xl border-2 p-3 sm:p-4 lg:p-6">
+            <div className="adm-card p-3 sm:p-4 lg:p-6">
               <div className="flex items-center">
-                <div className="p-2 bg-blue-600 rounded-lg shadow-lg ml-3">
-                  <ShoppingCart className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
+                <div className="p-2 rounded-xl ml-3 bg-[#dcedf8] text-[#2d6a8f]">
+                  <ShoppingCart className="h-5 w-5 sm:h-6 sm:w-6" />
                 </div>
                 <div className="ml-3">
-                  <p className="text-xs sm:text-sm font-bold text-gray-600">
+                  <p className="text-xs sm:text-sm font-medium text-[#6b7280]">
                     إجمالي الطلبات
                   </p>
-                  <p className="text-lg sm:text-xl lg:text-2xl font-black text-gray-900">
+                  <p className="text-lg sm:text-xl lg:text-2xl font-bold text-[#1f2430]">
                     {stats.totalOrders}
                   </p>
                 </div>
               </div>
             </div>
 
-            <div className="bg-white rounded-xl shadow-xl border-2 p-3 sm:p-4 lg:p-6">
+            <div className="adm-card p-3 sm:p-4 lg:p-6">
               <div className="flex items-center">
-                <div className="p-2 bg-amber-600 rounded-lg shadow-lg ml-3">
-                  <Clock className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
+                <div className="p-2 rounded-xl ml-3 bg-[#fbf6cf] text-[#8a7413]">
+                  <Clock className="h-5 w-5 sm:h-6 sm:w-6" />
                 </div>
                 <div className="ml-3">
-                  <p className="text-xs sm:text-sm font-bold text-gray-600">
+                  <p className="text-xs sm:text-sm font-medium text-[#6b7280]">
                     طلبات في الانتظار
                   </p>
-                  <p className="text-lg sm:text-xl lg:text-2xl font-black text-gray-900">
+                  <p className="text-lg sm:text-xl lg:text-2xl font-bold text-[#1f2430]">
                     {stats.pendingOrders}
                   </p>
                 </div>
               </div>
             </div>
 
-            <div className="bg-white rounded-xl shadow-xl border-2 p-3 sm:p-4 lg:p-6">
+            <div className="adm-card p-3 sm:p-4 lg:p-6">
               <div className="flex items-center">
-                <div className="p-2 bg-emerald-600 rounded-lg shadow-lg ml-3">
-                  <DollarSign className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
+                <div className="p-2 rounded-xl ml-3 bg-[#e0f3e2] text-[#2f7a3b]">
+                  <DollarSign className="h-5 w-5 sm:h-6 sm:w-6" />
                 </div>
                 <div className="ml-3">
-                  <p className="text-xs sm:text-sm font-bold text-gray-600">
+                  <p className="text-xs sm:text-sm font-medium text-[#6b7280]">
                     إجمالي الإيرادات
                   </p>
-                  <p className="text-lg sm:text-xl lg:text-2xl font-black text-gray-900">
+                  <p className="text-lg sm:text-xl lg:text-2xl font-bold text-[#1f2430]">
                     {formatCurrency(stats.totalRevenue)}
                   </p>
                 </div>
               </div>
             </div>
 
-            <div className="bg-white rounded-xl shadow-xl border-2 p-3 sm:p-4 lg:p-6">
+            <div className="adm-card p-3 sm:p-4 lg:p-6">
               <div className="flex items-center">
-                <div className="p-2 bg-green-600 rounded-lg shadow-lg ml-3">
-                  <DollarSign className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
+                <div className="p-2 rounded-xl ml-3 bg-[#f9d5d5] text-[#a13a3a]">
+                  <DollarSign className="h-5 w-5 sm:h-6 sm:w-6" />
                 </div>
                 <div className="ml-3">
-                  <p className="text-xs sm:text-sm font-bold text-gray-600">
+                  <p className="text-xs sm:text-sm font-medium text-[#6b7280]">
                     إجمالي العمولة
                   </p>
-                  <p className="text-base sm:text-lg lg:text-xl font-black text-green-600">
+                  <p className="text-base sm:text-lg lg:text-xl font-bold text-[#1f2430]">
                     {formatCurrency(stats.totalCommission)}
                   </p>
                 </div>
@@ -560,35 +560,35 @@ export default function AdminDashboard() {
                 href: "/admin/products/new",
                 icon: Plus,
                 color:
-                  "bg-gradient-to-br from-blue-600 to-blue-700 text-white border-blue-400/30 shadow-xl shadow-blue-500/20",
+                  "adm-btn-blue",
               },
               {
                 label: "إدارة العروض",
                 href: "/admin/offers",
                 icon: Sparkles,
                 color:
-                  "bg-gradient-to-br from-pink-600 to-pink-700 text-white border-pink-400/30 shadow-xl shadow-pink-500/20",
+                  "adm-btn-red",
               },
               {
                 label: "إدارة السائقين",
                 href: "/admin",
                 icon: Truck,
                 color:
-                  "bg-gradient-to-br from-purple-600 to-purple-700 text-white border-purple-400/30 shadow-xl shadow-purple-500/20",
+                  "adm-btn-green",
               },
               {
                 label: "تقرير سريع",
                 href: "/admin/quick-report",
                 icon: Flame,
                 color:
-                  "bg-gradient-to-br from-orange-600 to-orange-700 text-white border-orange-400/30 shadow-xl shadow-orange-500/20",
+                  "adm-btn-yellow",
               },
               {
                 label: "إدارة سعر الصرف",
                 href: "/admin/currency",
                 icon: DollarSign,
                 color:
-                  "bg-gradient-to-br from-emerald-600 to-emerald-700 text-white border-emerald-400/30 shadow-xl shadow-emerald-500/20",
+                  "adm-btn-blue",
               },
             ].map((action) => (
               <ButtonBase
@@ -596,7 +596,7 @@ export default function AdminDashboard() {
                 component={Link}
                 href={action.href}
                 focusRipple
-                className={`flex items-center gap-3 px-4 py-3 rounded-2xl border backdrop-blur-sm ${action.color} transition-all duration-200`}
+                className={`adm-btn flex items-center gap-3 px-4 py-3 ${action.color}`}
                 sx={{
                   direction: "rtl",
                   px: 2,
@@ -605,32 +605,18 @@ export default function AdminDashboard() {
                   width: "100%",
                   justifyContent: "flex-start",
                   textAlign: "right",
-                  position: "relative",
-                  overflow: "hidden",
-
-                  "&::before": {
-                    content: '""',
-                    position: "absolute",
-                    inset: 0,
-                    background: "rgba(255,255,255,0)",
-                    transition: "all .25s ease",
-                  },
-
-                  "&:hover::before": {
-                    background: "rgba(0, 0, 0, 0.08)",
-                  },
                 }}
               >
                 <action.icon className="h-5 w-5" />
-                <span className="font-bold">{action.label}</span>
+                <span className="font-semibold">{action.label}</span>
               </ButtonBase>
             ))}
           </div>
 
 
           {/* Main Content Tabs */}
-          <div className="bg-white rounded-xl shadow-2xl border-2 border-gray-200 overflow-hidden">
-            <div className="border-b-2 border-gray-200 bg-gray-50">
+          <div className="adm-card overflow-hidden">
+            <div className="border-b border-[#e7e5df] bg-[#faf9f5]">
               <nav className="-mb-px flex overflow-x-auto">
                 {[
                   { id: "orders", name: "الطلبات", icon: ShoppingCart },
@@ -651,18 +637,18 @@ export default function AdminDashboard() {
 
                       ...(activeTab === tab.id
                         ? {
-                          borderColor: "#2563eb", // blue-600
-                          color: "#1d4ed8", // blue-700
-                          backgroundColor: "#eff6ff", // blue-50
+                          borderColor: "#7fb9dc",
+                          color: "#1f4e6b",
+                          backgroundColor: "#dcedf8",
                         }
                         : {
                           borderColor: "transparent",
-                          color: "#4b5563", // gray-600
+                          color: "#6b7280",
 
                           "&:hover": {
-                            color: "#111827", // gray-900
-                            borderColor: "#9ca3af", // gray-400
-                            backgroundColor: "#f3f4f6", // gray-100
+                            color: "#1f2430",
+                            borderColor: "#d4d1c7",
+                            backgroundColor: "#f1efe7",
                           },
                         }),
                     }}
@@ -677,7 +663,7 @@ export default function AdminDashboard() {
               </nav>
             </div>
 
-            <div className="p-4 sm:p-6 bg-gray-50">
+            <div className="p-4 sm:p-6 bg-[#faf9f5]">
               {/* Orders Tab */}
               {activeTab === "orders" && (
                 <div className="space-y-4">
@@ -689,7 +675,7 @@ export default function AdminDashboard() {
                     {/* Filters */}
                     <div className="flex gap-3 flex-wrap">
                       <FormControl size="small" sx={{ minWidth: 180 }}>
-                        <InputLabel id="status-filter-label" sx={{ fontFamily: 'inherit', fontWeight: 'bold', fontSize: '0.875rem', '&.Mui-focused': { color: '#2563eb' } }}>الحالة</InputLabel>
+                        <InputLabel id="status-filter-label" sx={{ fontFamily: 'inherit', fontWeight: 'bold', fontSize: '0.875rem', '&.Mui-focused': { color: '#2d6a8f' } }}>الحالة</InputLabel>
                         <MuiSelect
                           labelId="status-filter-label"
                           value={statusFilter}
@@ -701,12 +687,12 @@ export default function AdminDashboard() {
                             fontWeight: 'bold',
                             fontSize: '0.875rem',
                             backgroundColor: 'white',
-                            boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)',
+                            boxShadow: 'none',
                             '& .MuiOutlinedInput-notchedOutline': { borderColor: '#d1d5db', borderWidth: 2 },
-                            '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#3b82f6' },
+                            '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#7fb9dc' },
                             '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#2563eb' },
                           }}
-                          MenuProps={{ disableScrollLock: true, PaperProps: { sx: { borderRadius: '0.75rem', mt: 0.5, boxShadow: '0 10px 25px -5px rgba(0,0,0,0.15)' } } }}
+                          MenuProps={{ disableScrollLock: true, PaperProps: { sx: { borderRadius: '0.75rem', mt: 0.5, boxShadow: '0 4px 14px rgba(31,36,48,0.08)' } } }}
                         >
                           <MuiMenuItem value="all" sx={{ fontFamily: 'inherit', fontWeight: 'bold', fontSize: '0.875rem' }}> جميع الحالات</MuiMenuItem>
                           <MuiMenuItem value="pending" sx={{ fontFamily: 'inherit', fontWeight: 'bold', fontSize: '0.875rem' }}>⏳ قيد الانتظار</MuiMenuItem>
@@ -719,7 +705,7 @@ export default function AdminDashboard() {
 
                       {regions.length > 0 && (
                         <FormControl size="small" sx={{ minWidth: 180 }}>
-                          <InputLabel id="region-filter-label" sx={{ fontFamily: 'inherit', fontWeight: 'bold', fontSize: '0.875rem', '&.Mui-focused': { color: '#7c3aed' } }}>المنطقة</InputLabel>
+                          <InputLabel id="region-filter-label" sx={{ fontFamily: 'inherit', fontWeight: 'bold', fontSize: '0.875rem', '&.Mui-focused': { color: '#2d6a8f' } }}>المنطقة</InputLabel>
                           <MuiSelect
                             labelId="region-filter-label"
                             value={regionFilter}
@@ -731,12 +717,12 @@ export default function AdminDashboard() {
                               fontWeight: 'bold',
                               fontSize: '0.875rem',
                               backgroundColor: 'white',
-                              boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)',
+                              boxShadow: 'none',
                               '& .MuiOutlinedInput-notchedOutline': { borderColor: '#d1d5db', borderWidth: 2 },
-                              '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#a855f7' },
+                              '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#7fb9dc' },
                               '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#7c3aed' },
                             }}
-                            MenuProps={{ disableScrollLock: true, PaperProps: { sx: { borderRadius: '0.75rem', mt: 0.5, boxShadow: '0 10px 25px -5px rgba(0,0,0,0.15)' } } }}
+                            MenuProps={{ disableScrollLock: true, PaperProps: { sx: { borderRadius: '0.75rem', mt: 0.5, boxShadow: '0 4px 14px rgba(31,36,48,0.08)' } } }}
                           >
                             <MuiMenuItem value="all" sx={{ fontFamily: 'inherit', fontWeight: 'bold', fontSize: '0.875rem' }}>📍 جميع المناطق</MuiMenuItem>
                             {regions.map((region) => (
@@ -755,7 +741,7 @@ export default function AdminDashboard() {
                     {filteredOrders.map((order) => (
                       <div
                         key={order.id}
-                        className="bg-white rounded-lg p-4 border-2 border-gray-200 shadow-lg hover:shadow-xl hover:border-blue-300 transition-all"
+                        className="adm-card adm-hover p-4"
                       >
                         <div className="flex justify-between items-start mb-3">
                           <div>
@@ -768,14 +754,14 @@ export default function AdminDashboard() {
                           </div>
                           <span
                             className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold ring-1 ring-inset ${order.status === "pending"
-                              ? "bg-amber-50 text-amber-700 ring-amber-600/20"
+                              ? "bg-[#fbf6cf] text-[#6f5d0c] ring-[#ecdf86]"
                               : order.status === "confirmed"
-                                ? "bg-blue-50 text-blue-700 ring-blue-600/20"
+                                ? "bg-[#dcedf8] text-[#1f4e6b] ring-[#a9d3ea]"
                                 : order.status === "on_delivery"
-                                  ? "bg-orange-50 text-orange-700 ring-orange-600/20"
+                                  ? "bg-[#fde6d2] text-[#8a4e17] ring-[#f3c9a0]"
                                   : order.status === "delivered"
-                                    ? "bg-emerald-50 text-emerald-700 ring-emerald-600/20"
-                                    : "bg-red-50 text-red-700 ring-red-600/20"
+                                    ? "bg-[#e0f3e2] text-[#265f30] ring-[#b7e2bb]"
+                                    : "bg-[#f9d5d5] text-[#7f2c2c] ring-[#eeb0b0]"
                               }`}
                           >
                             {formatOrderStatus(order.status)}
@@ -797,7 +783,7 @@ export default function AdminDashboard() {
                           </div>
                           <div className="flex justify-between text-sm">
                             <span className="text-gray-600 font-medium">المجموع:</span>
-                            <span className="text-emerald-700 font-black">
+                            <span className="text-[#265f30] font-bold">
                               {formatCurrency(Number(order.total_price ?? 0))}
                             </span>
                           </div>
@@ -806,7 +792,7 @@ export default function AdminDashboard() {
                         <div className="flex flex-wrap gap-2">
                           <Link
                             href={`/admin/orders/${order.id}`}
-                            className="flex-1 bg-blue-600 text-white text-center py-2 px-3 rounded-lg text-sm font-bold hover:bg-blue-700 transition-colors shadow-md"
+                            className="adm-btn adm-btn-blue flex-1 justify-center text-center py-2 px-3 text-sm"
                           >
                             عرض التفاصيل
                           </Link>
@@ -814,7 +800,7 @@ export default function AdminDashboard() {
                             <>
                               <button
                                 type="button"
-                                className="flex-1 inline-flex items-center justify-center bg-emerald-600 text-white py-2 px-3 rounded-lg text-sm font-bold hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-1 transition-all duration-200 shadow-md"
+                                className="adm-btn adm-btn-green flex-1 justify-center py-2 px-3 text-sm"
                                 onClick={() =>
                                   updateOrderStatus(order.id, "confirmed")
                                 }
@@ -824,7 +810,7 @@ export default function AdminDashboard() {
                               </button>
                               {drivers.length > 0 && (
                                 <FormControl size="small" sx={{ flex: 1, minWidth: 140 }}>
-                                  <InputLabel id={`mobile-driver-label-${order.id}`} sx={{ fontFamily: 'inherit', fontWeight: 'bold', fontSize: '0.875rem', '&.Mui-focused': { color: '#7c3aed' } }}>السائق</InputLabel>
+                                  <InputLabel id={`mobile-driver-label-${order.id}`} sx={{ fontFamily: 'inherit', fontWeight: 'bold', fontSize: '0.875rem', '&.Mui-focused': { color: '#2d6a8f' } }}>السائق</InputLabel>
                                   <MuiSelect
                                     labelId={`mobile-driver-label-${order.id}`}
                                     value=""
@@ -840,12 +826,12 @@ export default function AdminDashboard() {
                                       fontWeight: 'bold',
                                       fontSize: '0.875rem',
                                       backgroundColor: 'white',
-                                      boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)',
+                                      boxShadow: 'none',
                                       '& .MuiOutlinedInput-notchedOutline': { borderColor: '#d1d5db', borderWidth: 2 },
-                                      '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#a855f7' },
+                                      '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#7fb9dc' },
                                       '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#7c3aed' },
                                     }}
-                                    MenuProps={{ disableScrollLock: true, PaperProps: { sx: { borderRadius: '0.75rem', mt: 0.5, boxShadow: '0 10px 25px -5px rgba(0,0,0,0.15)' } } }}
+                                    MenuProps={{ disableScrollLock: true, PaperProps: { sx: { borderRadius: '0.75rem', mt: 0.5, boxShadow: '0 4px 14px rgba(31,36,48,0.08)' } } }}
                                   >
                                     {getDriversForRegion(
                                       extractRegion(order.address_text ?? "")
@@ -891,7 +877,7 @@ export default function AdminDashboard() {
                       </thead>
                       <tbody className="bg-white divide-y divide-gray-200">
                         {filteredOrders.map((order) => (
-                          <tr key={order.id} className="hover:bg-gray-50 transition-colors">
+                          <tr key={order.id} className="hover:bg-[#faf9f5] transition-colors">
                             <td className="px-6 py-4 whitespace-nowrap">
                               <div>
                                 <div className="text-sm font-bold text-gray-900">
@@ -913,27 +899,27 @@ export default function AdminDashboard() {
                             <td className="px-6 py-4 whitespace-nowrap">
                               <span
                                 className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ring-1 ring-inset ${order.status === "pending"
-                                  ? "bg-amber-50 text-amber-700 ring-amber-600/20"
+                                  ? "bg-[#fbf6cf] text-[#6f5d0c] ring-[#ecdf86]"
                                   : order.status === "confirmed"
-                                    ? "bg-blue-50 text-blue-700 ring-blue-600/20"
+                                    ? "bg-[#dcedf8] text-[#1f4e6b] ring-[#a9d3ea]"
                                     : order.status === "on_delivery"
-                                      ? "bg-orange-50 text-orange-700 ring-orange-600/20"
+                                      ? "bg-[#fde6d2] text-[#8a4e17] ring-[#f3c9a0]"
                                       : order.status === "delivered"
-                                        ? "bg-emerald-50 text-emerald-700 ring-emerald-600/20"
-                                        : "bg-red-50 text-red-700 ring-red-600/20"
+                                        ? "bg-[#e0f3e2] text-[#265f30] ring-[#b7e2bb]"
+                                        : "bg-[#f9d5d5] text-[#7f2c2c] ring-[#eeb0b0]"
                                   }`}
                               >
                                 {formatOrderStatus(order.status)}
                               </span>
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-emerald-600 font-bold">
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-[#265f30] font-semibold">
                               {formatCurrency(Number(order.total_price ?? 0))}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                               <div className="flex items-center gap-2 flex-wrap">
                                 <Link
                                   href={`/admin/orders/${order.id}`}
-                                  className="inline-flex items-center gap-1 bg-blue-600 text-white px-3 py-1.5 rounded-lg text-sm font-bold hover:bg-blue-700 transition-colors shadow-md"
+                                  className="adm-btn adm-btn-blue gap-1 px-3 py-1.5 text-sm"
                                 >
                                   <FileText className="h-4 w-4" />
                                   عرض
@@ -944,14 +930,14 @@ export default function AdminDashboard() {
                                       onClick={() =>
                                         updateOrderStatus(order.id, "confirmed")
                                       }
-                                      className="inline-flex items-center gap-1 bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-sm font-bold hover:bg-emerald-700 transition-colors shadow-md"
+                                      className="adm-btn adm-btn-green gap-1 px-3 py-1.5 text-sm"
                                     >
                                       <CheckCircle className="h-4 w-4" />
                                       تأكيد
                                     </button>
                                     {drivers.length > 0 && (
                                       <FormControl size="small" sx={{ minWidth: 160 }}>
-                                        <InputLabel id={`desktop-driver-label-${order.id}`} sx={{ fontFamily: 'inherit', fontWeight: 'bold', fontSize: '0.875rem', '&.Mui-focused': { color: '#7c3aed' } }}>السائق</InputLabel>
+                                        <InputLabel id={`desktop-driver-label-${order.id}`} sx={{ fontFamily: 'inherit', fontWeight: 'bold', fontSize: '0.875rem', '&.Mui-focused': { color: '#2d6a8f' } }}>السائق</InputLabel>
                                         <MuiSelect
                                           labelId={`desktop-driver-label-${order.id}`}
                                           value=""
@@ -967,12 +953,12 @@ export default function AdminDashboard() {
                                             fontWeight: 'bold',
                                             fontSize: '0.875rem',
                                             backgroundColor: 'white',
-                                            boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)',
+                                            boxShadow: 'none',
                                             '& .MuiOutlinedInput-notchedOutline': { borderColor: '#d1d5db', borderWidth: 2 },
-                                            '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#a855f7' },
+                                            '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#7fb9dc' },
                                             '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#7c3aed' },
                                           }}
-                                          MenuProps={{ disableScrollLock: true, PaperProps: { sx: { borderRadius: '0.75rem', mt: 0.5, boxShadow: '0 10px 25px -5px rgba(0,0,0,0.15)' } } }}
+                                          MenuProps={{ disableScrollLock: true, PaperProps: { sx: { borderRadius: '0.75rem', mt: 0.5, boxShadow: '0 4px 14px rgba(31,36,48,0.08)' } } }}
                                         >
                                           {getDriversForRegion(
                                             extractRegion(order.address_text ?? "")
@@ -1008,7 +994,7 @@ export default function AdminDashboard() {
                     </h2>
                     <Link
                       href="/admin/products/new"
-                      className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center font-bold shadow-lg"
+                      className="adm-btn adm-btn-blue px-4 py-2"
                     >
                       <Plus className="h-4 w-4 mr-2" />
                       إضافة منتج
@@ -1037,7 +1023,7 @@ export default function AdminDashboard() {
                       </thead>
                       <tbody className="bg-white divide-y divide-gray-200">
                         {products.map((product) => (
-                          <tr key={product.id} className="hover:bg-gray-50 transition-colors">
+                          <tr key={product.id} className="hover:bg-[#faf9f5] transition-colors">
                             <td className="px-6 py-4 whitespace-nowrap">
                               <div className="text-sm font-semibold text-gray-900">
                                 {product.name}
@@ -1049,7 +1035,7 @@ export default function AdminDashboard() {
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-semibold">
                               {product.sku || "-"}
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-emerald-600 font-bold">
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-[#265f30] font-semibold">
                               {formatCurrency(product.price)}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-semibold">
@@ -1090,7 +1076,7 @@ export default function AdminDashboard() {
                     <button
                       onClick={fetchDriverReports}
                       disabled={reportsLoading}
-                      className="inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 font-bold shadow-lg"
+                      className="adm-btn adm-btn-blue gap-2 px-4 py-2 disabled:opacity-50"
                     >
                       <RefreshCcw
                         className={`h-4 w-4 ${reportsLoading ? "animate-spin" : ""
@@ -1102,7 +1088,7 @@ export default function AdminDashboard() {
 
                   {reportsLoading ? (
                     <div className="flex justify-center py-12">
-                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#7fb9dc]"></div>
                     </div>
                   ) : driverReports.length > 0 ? (
                     <div className="overflow-hidden bg-white rounded-xl shadow-sm border border-gray-100">
@@ -1125,7 +1111,7 @@ export default function AdminDashboard() {
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-200">
                           {driverReports.map((report: any) => (
-                            <tr key={report.driver?.id} className="hover:bg-gray-50 transition-colors">
+                            <tr key={report.driver?.id} className="hover:bg-[#faf9f5] transition-colors">
                               <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">
                                 {report.driver?.name || "غير محدد"}
                               </td>
@@ -1135,7 +1121,7 @@ export default function AdminDashboard() {
                               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-semibold">
                                 {report.stats?.completed || 0}
                               </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-emerald-600 font-bold">
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-[#265f30] font-semibold">
                                 {formatCurrency(report.revenue || 0)}
                               </td>
                             </tr>
@@ -1144,7 +1130,7 @@ export default function AdminDashboard() {
                       </table>
                     </div>
                   ) : (
-                    <div className="text-center py-12 text-gray-600 font-medium bg-white rounded-lg shadow-lg border-2 border-gray-200">
+                    <div className="text-center py-12 text-gray-600 font-medium adm-card">
                       لا توجد تقارير متاحة
                     </div>
                   )}
@@ -1155,28 +1141,28 @@ export default function AdminDashboard() {
               {activeTab === "settings" && (
                 <div className="space-y-6">
                   {/* Header */}
-                  <div className="border-b-2 border-gray-300 pb-4">
-                    <h2 className="text-2xl font-black text-gray-900 flex items-center gap-3">
-                      <div className="p-2 bg-gradient-to-br from-blue-600 to-purple-600 rounded-xl shadow-lg">
-                        <Settings className="h-6 w-6 text-white" />
+                  <div className="border-b border-[#e7e5df] pb-4">
+                    <h2 className="text-2xl font-bold text-[#1f2430] flex items-center gap-3">
+                      <div className="p-2 bg-[#dcedf8] text-[#2d6a8f] rounded-xl">
+                        <Settings className="h-6 w-6" />
                       </div>
                       إعدادات النظام
                     </h2>
-                    <p className="text-gray-700 mt-2 font-medium">إدارة جميع إعدادات المنصة والعمليات</p>
+                    <p className="text-[#6b7280] mt-2">إدارة جميع إعدادات المنصة والعمليات</p>
                   </div>
                   {/* Commission Settings Section */}
-                  <div className="bg-gradient-to-br from-purple-50 via-purple-100 to-pink-100 border-2 border-purple-300 rounded-2xl p-6 shadow-2xl">
+                  <div className="adm-card adm-tint-yellow p-6">
                     <div className="flex items-center gap-3 mb-6">
-                      <div className="p-3 bg-gradient-to-br from-purple-600 to-pink-600 rounded-xl shadow-xl">
-                        <Percent className="h-6 w-6 text-white" />
+                      <div className="p-3 bg-white/70 text-[#6f5d0c] rounded-xl">
+                        <Percent className="h-6 w-6" />
                       </div>
                       <div>
-                        <h3 className="text-xl font-black text-gray-900">إعدادات العمولة</h3>
-                        <p className="text-sm text-purple-800 font-bold">تحديد نسب العمولة للمنصة والسائقين</p>
+                        <h3 className="text-xl font-bold text-[#1f2430]">إعدادات العمولة</h3>
+                        <p className="text-sm text-[#6b7280]">تحديد نسب العمولة للمنصة والسائقين</p>
                       </div>
                     </div>
 
-                    <div className="bg-white rounded-xl p-1 border-2 border-purple-300 shadow-xl">
+                    <div className="bg-white rounded-xl p-1 border border-[#e7e5df]">
                       <CommissionSettings />
                     </div>
                   </div>

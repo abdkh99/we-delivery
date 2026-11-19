@@ -329,3 +329,111 @@ body {
 .animate-ripple {
   animation: ripple-effect 0.6s linear;
 }
+
+/* ============================================================
+   Admin calm theme — soft pastel palette (blue / green / yellow / salmon)
+   Scoped to .adm so the storefront is not affected.
+   Hover rule: one simple effect only — slightly deeper tone / border.
+   ============================================================ */
+/* variables live on :root so MUI portals (dialogs/menus) can use them too */
+:root {
+  --adm-bg: #f6f5ef;
+  --adm-surface: #ffffff;
+  --adm-surface-2: #faf9f5;
+  --adm-line: #e7e5df;
+  --adm-line-strong: #d4d1c7;
+  --adm-text: #1f2430;
+  --adm-muted: #6b7280;
+
+  --adm-blue: #dcedf8;
+  --adm-blue-mid: #a9d3ea;
+  --adm-blue-deep: #93c6e2;
+  --adm-blue-ink: #1f4e6b;
+
+  --adm-green: #e0f3e2;
+  --adm-green-mid: #b7e2bb;
+  --adm-green-deep: #a2d6a7;
+  --adm-green-ink: #265f30;
+
+  --adm-yellow: #fbf6cf;
+  --adm-yellow-mid: #f3e78f;
+  --adm-yellow-deep: #ecdd77;
+  --adm-yellow-ink: #6f5d0c;
+
+  --adm-red: #f9d5d5;
+  --adm-red-mid: #ee9a9a;
+  --adm-red-deep: #e68383;
+  --adm-red-ink: #7f2c2c;
+}
+
+.adm {
+  background: var(--adm-bg);
+  color: var(--adm-text);
+}
+
+.adm-card {
+  background: var(--adm-surface);
+  border: 1px solid var(--adm-line);
+  border-radius: 18px;
+}
+
+/* the single hover effect for interactive cards: border gets a bit darker */
+.adm-hover:hover {
+  border-color: var(--adm-line-strong);
+}
+
+.adm-tint-blue {
+  background: var(--adm-blue);
+  border-color: var(--adm-blue-mid);
+}
+
+.adm-tint-yellow {
+  background: var(--adm-yellow);
+  border-color: var(--adm-yellow-mid);
+}
+
+.adm-btn {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 12px;
+  font-weight: 600;
+  border: 1px solid transparent;
+  transition: background-color 0.15s ease;
+}
+
+/* single hover effect for buttons: fill goes one shade deeper */
+.adm-btn-blue {
+  background: var(--adm-blue-mid);
+  color: var(--adm-blue-ink);
+}
+
+.adm-btn-blue:hover {
+  background: var(--adm-blue-deep);
+}
+
+.adm-btn-green {
+  background: var(--adm-green-mid);
+  color: var(--adm-green-ink);
+}
+
+.adm-btn-green:hover {
+  background: var(--adm-green-deep);
+}
+
+.adm-btn-yellow {
+  background: var(--adm-yellow-mid);
+  color: var(--adm-yellow-ink);
+}
+
+.adm-btn-yellow:hover {
+  background: var(--adm-yellow-deep);
+}
+
+.adm-btn-red {
+  background: var(--adm-red-mid);
+  color: var(--adm-red-ink);
+}
+
+.adm-btn-red:hover {
+  background: var(--adm-red-deep);
+}

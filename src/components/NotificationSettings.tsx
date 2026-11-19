@@ -166,13 +166,13 @@ export default function NotificationSettings() {
                             width: 48,
                             height: 48,
                             borderRadius: 2,
-                            background: "linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%)",
+                            background: "#f9d5d5",
                             display: "flex",
                             alignItems: "center",
                             justifyContent: "center",
                         }}
                     >
-                        <NotificationsActiveIcon sx={{ color: "white", fontSize: 24 }} />
+                        <NotificationsActiveIcon sx={{ color: "#7f2c2c", fontSize: 24 }} />
                     </Box>
                 }
                 title={
@@ -246,13 +246,16 @@ export default function NotificationSettings() {
                         disabled={saving}
                         startIcon={saving ? <CircularProgress size={20} color="inherit" /> : <SaveIcon />}
                         sx={{
-                            background: "linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%)",
+                            background: "#ee9a9a",
+ color: "#7f2c2c",
+ boxShadow: "none",
                             textTransform: "none",
                             fontWeight: "bold",
                             py: 1.5,
                             borderRadius: 2,
                             "&:hover": {
-                                background: "linear-gradient(135deg, #d97706 0%, #f59e0b 100%)",
+                                background: "#e68383",
+ boxShadow: "none",
                             },
                         }}
                     >

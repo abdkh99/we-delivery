@@ -187,13 +187,13 @@ export default function DeliveryFeeSettings() {
                             width: 48,
                             height: 48,
                             borderRadius: 2,
-                            background: "linear-gradient(135deg, #f97316 0%, #fb923c 100%)",
+                            background: "#e0f3e2",
                             display: "flex",
                             alignItems: "center",
                             justifyContent: "center",
                         }}
                     >
-                        <LocalShippingIcon sx={{ color: "white", fontSize: 24 }} />
+                        <LocalShippingIcon sx={{ color: "#265f30", fontSize: 24 }} />
                     </Box>
                 }
                 title={
@@ -212,13 +212,16 @@ export default function DeliveryFeeSettings() {
                         startIcon={<AddIcon />}
                         onClick={() => handleOpenDialog()}
                         sx={{
-                            background: "linear-gradient(135deg, #f97316 0%, #fb923c 100%)",
+                            background: "#b7e2bb",
+ color: "#265f30",
+ boxShadow: "none",
                             borderRadius: 2,
                             textTransform: "none",
                             fontWeight: "bold",
                             px: 3,
                             "&:hover": {
-                                background: "linear-gradient(135deg, #ea580c 0%, #f97316 100%)",
+                                background: "#a2d6a7",
+ boxShadow: "none",
                             },
                         }}
                     >
@@ -335,13 +338,13 @@ export default function DeliveryFeeSettings() {
                                 width: 40,
                                 height: 40,
                                 borderRadius: 2,
-                                background: "linear-gradient(135deg, #f97316 0%, #fb923c 100%)",
+                                background: "#e0f3e2",
                                 display: "flex",
                                 alignItems: "center",
                                 justifyContent: "center",
                             }}
                         >
-                            {editingId ? <EditIcon sx={{ color: "white" }} /> : <AddIcon sx={{ color: "white" }} />}
+                            {editingId ? <EditIcon sx={{ color: "#265f30" }} /> : <AddIcon sx={{ color: "#265f30" }} />}
                         </Box>
                         <Typography variant="h6" fontWeight="bold">
                             {editingId ? "تعديل شريحة التوصيل" : "إضافة شريحة جديدة"}
@@ -404,12 +407,15 @@ export default function DeliveryFeeSettings() {
                         disabled={saving}
                         startIcon={saving ? <CircularProgress size={20} color="inherit" /> : <SaveIcon />}
                         sx={{
-                            background: "linear-gradient(135deg, #f97316 0%, #fb923c 100%)",
+                            background: "#b7e2bb",
+ color: "#265f30",
+ boxShadow: "none",
                             textTransform: "none",
                             fontWeight: "bold",
                             px: 3,
                             "&:hover": {
-                                background: "linear-gradient(135deg, #ea580c 0%, #f97316 100%)",
+                                background: "#a2d6a7",
+ boxShadow: "none",
                             },
                         }}
                     >
