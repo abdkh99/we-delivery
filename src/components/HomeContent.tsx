@@ -1,451 +1,406 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import Button from "@mui/material/Button";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
+import Image from "next/image";
+import useSWR from "swr";
+import Lottie from "lottie-react";
+import { motion, useReducedMotion, useInView } from "framer-motion";
+import { Phone, Clock, Package, ChevronLeft } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import Navigation from "@/components/Navigation";
-import {
-    Package,
-    Truck,
-    Star,
-    MapPin,
-    Phone,
-    Clock,
-    ArrowLeft,
-} from "lucide-react";
 import LoadingAnimation from "@/components/LoadingAnimation";
-import Lottie from "lottie-react";
-import animationData from "@/animations/DeliveryTruck _Loading _Exporting.json";
 import OffersBanner from "@/components/OffersBanner";
-import { ButtonBase, Stack } from "@mui/material";
+import { fetcher } from "@/lib/fetcher";
+import { formatCurrency } from "@/lib/utils";
+import { getCategoryArabic } from "@/lib/translations";
+import animationData from "@/animations/DeliveryTruck _Loading _Exporting.json";
 
-// Helper component for features
-function FeatureCard({
-    icon,
-    title,
-    description,
-}: {
-    icon: React.ReactNode;
-    title: string;
-    description: string;
-}) {
-    return (
-        <div className="group bg-white p-8 rounded-3xl border border-slate-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
-            <div className="w-16 h-16 rounded-2xl bg-slate-50 flex items-center justify-center mb-6 group-hover:bg-blue-50 transition-colors">
-                <div className="transform group-hover:scale-110 transition-transform duration-300">
-                    {icon}
-                </div>
-            </div>
-            <h3 className="text-xl font-bold text-slate-900 mb-3 group-hover:text-blue-600 transition-colors">
-                {title}
-            </h3>
-            <p className="text-slate-600 leading-relaxed">{description}</p>
-        </div>
-    );
+interface HomeProduct {
+  id: string;
+  name: string;
+  price: number;
+  image_url: string | null;
+  category: string | null;
 }
 
-function CheckCircleIcon(props: any) {
-    return (
-        <svg
-            {...props}
-            xmlns="http://www.w3.org/2000/svg"
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
+const steps = [
+  { title: "اختر منتجاتك", text: "تصفّح المنتجات وأضف ما تريد إلى السلة." },
+  {
+    title: "أكّد الطلب",
+    text: "ثبّت عنوانك. رسوم التوصيل تُحدَّد حسب قيمة الطلب.",
+  },
+  { title: "استلمه عند بابك", text: "تابع طلبك من التحضير حتى يصلك." },
+];
+
+const btn =
+  "inline-flex items-center justify-center rounded-full px-8 py-3.5 text-lg font-bold transition-colors focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#0a79c4]";
+const btnPrimary = `${btn} bg-[#0a79c4] text-white hover:bg-[#0868a8]`;
+const btnGhost = `${btn} bg-white text-[#0b1a2a] ring-1 ring-slate-300 hover:ring-[#0a79c4]`;
+
+function LatestProducts() {
+  const { data, error, isLoading } = useSWR<{ products: HomeProduct[] }>(
+    "/api/products",
+    fetcher,
+    {
+      revalidateOnFocus: false,
+      dedupingInterval: 60000,
+    },
+  );
+  const items = (data?.products ?? []).slice(0, 8);
+
+  // لا نعرض القسم إذا فشل التحميل أو لا توجد منتجات
+  if (!isLoading && (error || items.length === 0)) return null;
+
+  return (
+    <section className="mx-auto max-w-7xl px-4 pb-16 sm:px-6 lg:px-8 lg:pb-20">
+      <div className="flex items-end justify-between gap-4">
+        <h2 className="text-3xl font-extrabold leading-snug md:text-4xl">
+          وصل حديثاً
+        </h2>
+        <Link
+          href="/products"
+          className="flex items-center gap-1 font-bold text-[#0a79c4] hover:underline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#0a79c4]"
         >
-            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-            <polyline points="22 4 12 14.01 9 11.01" />
-        </svg>
-    );
+          كل المنتجات
+          <ChevronLeft className="h-5 w-5" aria-hidden />
+        </Link>
+      </div>
+
+      <div className="mt-8 grid grid-cols-2 gap-x-4 gap-y-8 md:grid-cols-3 lg:grid-cols-4 lg:gap-x-6">
+        {isLoading
+          ? Array.from({ length: 8 }).map((_, i) => (
+              <div key={i} aria-hidden>
+                <div className="aspect-square animate-pulse rounded-2xl bg-slate-100" />
+                <div className="mt-3 h-4 w-3/4 animate-pulse rounded bg-slate-100" />
+                <div className="mt-2 h-4 w-1/3 animate-pulse rounded bg-slate-100" />
+              </div>
+            ))
+          : items.map((p) => (
+              <Link
+                key={p.id}
+                href={`/products/${p.id}`}
+                className="group block focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#0a79c4]"
+              >
+                <div className="relative aspect-square overflow-hidden rounded-2xl bg-slate-100">
+                  {p.image_url ? (
+                    <Image
+                      src={p.image_url}
+                      alt={p.name}
+                      fill
+                      sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                      className="object-cover transition-transform duration-500 group-hover:scale-105"
+                    />
+                  ) : (
+                    <span className="absolute inset-0 flex items-center justify-center text-slate-300">
+                      <Package className="h-12 w-12" aria-hidden />
+                    </span>
+                  )}
+                </div>
+                <h3 className="mt-3 line-clamp-2 font-bold leading-snug">
+                  {p.name}
+                </h3>
+                {p.category && (
+                  <p className="mt-0.5 text-sm text-slate-500">
+                    {getCategoryArabic(p.category)}
+                  </p>
+                )}
+                <p className="mt-1 text-lg font-extrabold text-[#0a79c4]">
+                  {formatCurrency(p.price)}
+                </p>
+              </Link>
+            ))}
+      </div>
+    </section>
+  );
+}
+
+const NODE_OFF = {
+  backgroundColor: "#ffffff",
+  borderColor: "#cbd5e1",
+  color: "#94a3b8",
+};
+const NODE_ON = {
+  backgroundColor: "#0a79c4",
+  borderColor: "#0a79c4",
+  color: "#ffffff",
+};
+
+// قطعة خط بين خطوتين: تمتلئ بالأزرق من الأولى إلى الثانية
+function Segment({
+  axis,
+  className,
+  on,
+  delay,
+  duration,
+  reduce,
+}: {
+  axis: "x" | "y";
+  className: string;
+  on: boolean;
+  delay: number;
+  duration: number;
+  reduce: boolean;
+}) {
+  const full = reduce || on ? 1 : 0;
+  return (
+    <span className={`absolute bg-slate-200 ${className}`} aria-hidden>
+      <motion.span
+        className="absolute inset-0 bg-[#0a79c4]"
+        style={axis === "x" ? { originX: 1 } : { originY: 0 }}
+        initial={
+          axis === "x" ? { scaleX: reduce ? 1 : 0 } : { scaleY: reduce ? 1 : 0 }
+        }
+        animate={axis === "x" ? { scaleX: full } : { scaleY: full }}
+        transition={{ delay, duration, ease: "linear" }}
+      />
+    </span>
+  );
+}
+
+// خط زمني: يمتلئ الخط ثم تضيء الخطوات بالتتابع عند ظهوره على الشاشة (مرة واحدة)
+function StepsTimeline() {
+  const reduce = !!useReducedMotion();
+  const ref = useRef<HTMLOListElement>(null);
+  const inView = useInView(ref, { once: true, amount: 0.3 });
+  const on = reduce || inView;
+  const segment = reduce ? 0 : 0.8; // مدة الانتقال بين خطوتين
+  const at = (i: number) => (reduce ? 0 : 0.2 + i * 0.8);
+
+  return (
+    <ol
+      ref={ref}
+      className="relative mt-14 flex flex-col gap-12 md:grid md:grid-cols-3 md:gap-8"
+    >
+      {steps.map((s, i) => (
+        <li
+          key={s.title}
+          className="relative flex gap-5 md:flex-col md:items-center md:text-center"
+        >
+          {i < steps.length - 1 && (
+            <>
+              <Segment
+                axis="y"
+                className="start-[23px] top-12 h-full w-0.5 md:hidden"
+                on={on}
+                delay={at(i)}
+                duration={segment}
+                reduce={reduce}
+              />
+              <Segment
+                axis="x"
+                className="start-1/2 top-[23px] hidden h-0.5 w-[calc(100%+2rem)] md:block"
+                on={on}
+                delay={at(i)}
+                duration={segment}
+                reduce={reduce}
+              />
+            </>
+          )}
+          <motion.span
+            className="relative z-10 flex h-12 w-12 shrink-0 items-center justify-center rounded-full border-2 text-xl font-bold"
+            initial={reduce ? NODE_ON : NODE_OFF}
+            animate={
+              on ? { ...NODE_ON, scale: reduce ? 1 : [1, 1.15, 1] } : NODE_OFF
+            }
+            transition={{ delay: at(i), duration: reduce ? 0 : 0.4 }}
+          >
+            {i + 1}
+          </motion.span>
+          <motion.div
+            initial={{ opacity: reduce ? 1 : 0.45 }}
+            animate={{ opacity: on ? 1 : reduce ? 1 : 0.45 }}
+            transition={{ delay: at(i), duration: reduce ? 0 : 0.4 }}
+          >
+            <h3 className="text-xl font-bold">{s.title}</h3>
+            <p className="mt-2 leading-loose text-slate-600 md:mx-auto md:max-w-[16rem]">
+              {s.text}
+            </p>
+          </motion.div>
+        </li>
+      ))}
+    </ol>
+  );
 }
 
 interface HomeContentProps {
-    shouldShowLoader: boolean;
+  shouldShowLoader: boolean;
 }
 
 export default function HomeContent({ shouldShowLoader }: HomeContentProps) {
-    const { user } = useAuth();
-    const [loading, setLoading] = useState(shouldShowLoader);
+  const { user } = useAuth();
+  const reduce = useReducedMotion();
+  const [loading, setLoading] = useState(shouldShowLoader);
 
-    useEffect(() => {
-        if (loading) {
-            const timer = setTimeout(() => {
-                setLoading(false);
-                // Set session cookie (clears when browser closes)
-                document.cookie = "hasVisitedHome=true; path=/";
-            }, 2500);
-
-            return () => clearTimeout(timer);
-        }
-    }, [loading]);
-
+  useEffect(() => {
     if (loading) {
-        return <LoadingAnimation />;
+      const timer = setTimeout(() => {
+        setLoading(false);
+        document.cookie = "hasVisitedHome=true; path=/";
+      }, 2500);
+      return () => clearTimeout(timer);
     }
+  }, [loading]);
 
-    return (
-        <div className="min-h-screen bg-slate-50 font-sans">
-            <Navigation />
+  if (loading) return <LoadingAnimation />;
 
-            {/* Offers Banner */}
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4">
-                <OffersBanner />
+  // حركة واحدة بنفس اتجاه الشاحنة (نحو اليمين): الشاحنة تدخل وتتوقّف بهدوء،
+  // والنص والأزرار يلحقون بها كمجموعة واحدة بدون تتابع
+  const drive = reduce
+    ? {}
+    : {
+        initial: { x: "-150%" },
+        animate: { x: 0 },
+        transition: { duration: 1.1, ease: [0.16, 1, 0.3, 1] as const },
+      };
+  const follow = reduce
+    ? {}
+    : {
+        initial: { opacity: 0, x: -32 },
+        animate: { opacity: 1, x: 0 },
+        transition: {
+          duration: 0.7,
+          delay: 0.25,
+          ease: [0.16, 1, 0.3, 1] as const,
+        },
+      };
+
+  return (
+    <div className="min-h-screen bg-white font-sans text-[#0b1a2a]">
+      <Navigation />
+
+      <div className="mx-auto max-w-7xl px-4 pt-4 sm:px-6 lg:px-8 empty:hidden">
+        <OffersBanner />
+      </div>
+
+      {/* Hero */}
+      <section className="mx-auto max-w-7xl px-4 pb-16 pt-8 sm:px-6 lg:px-8 lg:pb-20 lg:pt-12">
+        <div className="relative grid items-center gap-6 overflow-hidden rounded-[32px] bg-[#eaf6fe] px-6 py-12 sm:px-12 lg:grid-cols-2 lg:py-10">
+          <span
+            className="absolute -start-24 -top-24 h-72 w-72 rounded-full bg-[#d5ecfb]"
+            aria-hidden
+          />
+          <span
+            className="absolute -bottom-32 end-1/3 h-64 w-64 rounded-full bg-[#d5ecfb]/70"
+            aria-hidden
+          />
+
+          <motion.div className="relative" {...follow}>
+            <h1 className="text-4xl font-extrabold leading-[1.35] sm:text-5xl lg:text-6xl">
+              اطلب اليوم،
+              <br />
+              واستلم عند بابك.
+            </h1>
+            <p className="mt-5 max-w-lg text-lg leading-loose text-slate-600">
+              تصفّح المنتجات، ثبّت موقعك على الخريطة، وتابع طلبك حتى يصلك.
+            </p>
+            <div className="mt-8 flex flex-wrap gap-3">
+              <Link href="/products" className={btnPrimary}>
+                تصفّح المنتجات
+              </Link>
+              <Link href={user ? "/orders" : "/signup"} className={btnGhost}>
+                {user ? "طلباتي" : "إنشاء حساب"}
+              </Link>
             </div>
+          </motion.div>
 
-            {/* Hero Section */}
-            <section className="relative overflow-hidden bg-white pt-16 pb-20 lg:pt-24 lg:pb-28">
-                <div className="absolute inset-0 bg-gradient-to-br from-blue-50 to-white opacity-70" />
-                <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="grid lg:grid-cols-2 gap-12 lg:gap-8 items-center">
-                        {/* Text Content */}
-                        <div className="text-center lg:text-right order-2 lg:order-1">
-                            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-100/50 text-blue-700 text-sm font-medium mb-6">
-                                <span className="relative flex h-2 w-2">
-                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
-                                    <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
-                                </span>
-                                خدمة التوصيل الأسرع في مدينتك
-                            </div>
+          <motion.div className="relative" {...drive}>
+            <Lottie
+              animationData={animationData}
+              loop
+              className="mx-auto h-auto w-full max-w-xs lg:max-w-md"
+            />
+          </motion.div>
+        </div>
+      </section>
 
-                            <h1 className="text-4xl md:text-5xl lg:text-7xl font-extrabold text-slate-900 tracking-tight mb-6 leading-tight">
-                                طلبات يومية <br />
-                                <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#1e9df1] to-blue-600">
-                                    توصيل سريع
-                                </span>
-                            </h1>
+      <LatestProducts />
 
-                            <p className="text-lg md:text-xl text-slate-600 mb-8 leading-relaxed max-w-2xl mx-auto lg:mx-0">
-                                نوفر لك تجربة تسوق فريدة، جودة عالية،
-                                وتوصيل سريع يضمن لك الراحة والرضا التام.
-                            </p>
+      {/* الخطوات: تسلسل فعلي، فالخط الزمني والترقيم مناسبان */}
+      <section className="bg-slate-50">
+        <div className="mx-auto max-w-5xl px-4 py-20 sm:px-6 lg:px-8 lg:py-24">
+          <h2 className="text-center text-3xl font-extrabold leading-snug md:text-4xl">
+            ثلاث خطوات وطلبك عندك
+          </h2>
+          <StepsTimeline />
+          <div className="mt-14 text-center">
+            <Link href="/products" className={btnPrimary}>
+              ابدأ الطلب
+            </Link>
+          </div>
+        </div>
+      </section>
 
-                            <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
-                                {user ? (
-                                    <Link href="/products">
-                                        <Button variant="contained" sx={{
-                                            borderRadius: "12px",
-                                            backgroundColor: "#2563eb",
-                                            fontFamily: "'Cairo', sans-serif",
-                                            ":hover": {
-                                                backgroundColor: "#1b5ae2ff",
-                                            },
-                                            display: "inline-flex",
-                                            alignItems: "center",
-                                            justifyContent: "center",
-                                            color: "#fff",
-                                            px: 6,        // 8 * 4px = 32px
-                                            py: 2.5,        // 4 * 4px = 16px
-                                            fontWeight: "bold",
-                                            fontSize: "1.125rem", // text-lg
-                                            boxShadow: "0 10px 15px -3px rgba(37, 99, 235, 0.2), 0 4px 6px -2px rgba(37, 99, 235, 0.2)",
-                                        }}>
-                                            تسوق الآن
-                                            <ArrowLeft className="mr-2 h-5 w-5" />
+      {/* تواصل */}
+      <section className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8 lg:py-24">
+        <div className="grid items-center gap-10 rounded-[32px] bg-[#eaf6fe] p-8 sm:p-12 lg:grid-cols-2">
+          <div>
+            <h2 className="text-3xl font-extrabold leading-snug md:text-4xl">
+              عندك سؤال عن طلبك؟
+            </h2>
+            <p className="mt-3 text-lg text-slate-600">
+              راسلنا على واتساب، نرد عليك خلال ساعات العمل.
+            </p>
+            <a
+              href="https://wa.me/963995696426"
+              target="_blank"
+              rel="noopener noreferrer"
+              className={`${btnPrimary} mt-7`}
+            >
+              راسلنا على واتساب
+            </a>
+          </div>
+          <dl className="space-y-6 lg:justify-self-end">
+            <div className="flex items-center gap-4">
+              <span className="flex h-12 w-12 items-center justify-center rounded-full bg-white text-[#0a79c4]">
+                <Phone className="h-5 w-5" aria-hidden />
+              </span>
+              <div>
+                <dt className="text-sm text-slate-500">اتصل بنا</dt>
+                <dd>
+                  <a
+                    href="tel:+963995696426"
+                    dir="ltr"
+                    className="text-xl font-bold hover:underline"
+                  >
+                    +963 995 696 426
+                  </a>
+                </dd>
+              </div>
+            </div>
+            <div className="flex items-center gap-4">
+              <span className="flex h-12 w-12 items-center justify-center rounded-full bg-white text-[#0a79c4]">
+                <Clock className="h-5 w-5" aria-hidden />
+              </span>
+              <div>
+                <dt className="text-sm text-slate-500">ساعات العمل</dt>
+                <dd className="text-xl font-bold">كل يوم، 9:00 ص - 10:00 م</dd>
+              </div>
+            </div>
+          </dl>
+        </div>
+      </section>
 
-                                        </Button>
-                                    </Link>
-                                ) : (
-                                    <>
-                                        <Link
-                                            href="/signup"
-                                        >
-                                            <Button variant="contained" sx={{
-                                                borderRadius: "12px",
-                                                backgroundColor: "#2563eb",
-                                                fontFamily: "'Cairo', sans-serif",
-                                                ":hover": {
-                                                    backgroundColor: "#1b5ae2ff",
-                                                },
-                                                display: "inline-flex",
-                                                alignItems: "center",
-                                                justifyContent: "center",
-                                                color: "#fff",
-                                                px: 4,        // 8 * 4px = 32px
-                                                py: 2.5,        // 4 * 4px = 16px
-                                                fontWeight: "bold",
-                                                fontSize: "1.125rem", // text-lg
-                                                boxShadow: "0 10px 15px -3px rgba(37, 99, 235, 0.2), 0 4px 6px -2px rgba(37, 99, 235, 0.2)",
-                                            }}>
-                                                ابدأ الآن
-                                                <ArrowLeft className="mr-2 h-5 w-5" />
-                                            </Button>
-                                        </Link>
-                                        <Link
-                                            href="/products"
-                                        >
-                                            <Button variant="contained" sx={{
-                                                borderRadius: "12px",
-                                                backgroundColor: "#ffffff",
-                                                fontFamily: "'Cairo', sans-serif",
-                                                ":hover": {
-                                                    backgroundColor: "#ffffff",
-                                                },
-                                                display: "inline-flex",
-                                                alignItems: "center",
-                                                justifyContent: "center",
-                                                color: "#000000",
-                                                px: 6,        // 8 * 4px = 32px
-                                                py: 2.5,        // 4 * 4px = 16px
-                                                fontWeight: "bold",
-                                                fontSize: "1.125rem", // text-lg
-                                                boxShadow: "0 10px 15px -3px rgba(37, 99, 235, 0.2), 0 4px 6px -2px rgba(37, 99, 235, 0.2)",
-                                            }}>
-                                                تصفح المنتجات
-                                                <ArrowLeft className="mr-2 h-5 w-5" />
-
-                                            </Button>
-
-                                        </Link>
-                                    </>
-                                )}
-                            </div>
-
-                            <div className="mt-10 flex items-center justify-center lg:justify-start gap-6 text-sm text-slate-500">
-                                <div className="flex items-center gap-2">
-                                    <CheckCircleIcon className="w-5 h-5 text-green-500" />
-                                    <span>توصيل مجاني</span>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <CheckCircleIcon className="w-5 h-5 text-green-500" />
-                                    <span>دفع آمن</span>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <CheckCircleIcon className="w-5 h-5 text-green-500" />
-                                    <span>دعم 24/7</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Hero Image/Animation */}
-                        <div className="relative order-1 lg:order-2 hidden lg:flex justify-center lg:justify-end">
-                            <div className="relative w-full max-w-lg lg:max-w-xl">
-                                <div className="relative rounded-3xl p-6">
-                                    <Lottie
-                                        animationData={animationData}
-                                        loop={true}
-                                        className="w-full h-auto"
-                                    />
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            {/* Features Section */}
-            <section className="py-24 bg-white relative">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="text-center max-w-3xl mx-auto mb-16">
-                        <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-6">
-                            لماذا تختار متجرنا؟
-                        </h2>
-                        <p className="text-lg text-slate-600">
-                            نحن نجمع بين الجودة، السرعة، والراحة لنقدم لك أفضل تجربة تسوق
-                            ممكنة.
-                        </p>
-                    </div>
-
-                    <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
-                        <FeatureCard
-                            icon={<Truck className="h-8 w-8 text-blue-600" />}
-                            title="توصيل سريع"
-                            description="احصل على مشترياتك خلال وقت قياسي بفضل شبكة التوصيل المتطورة لدينا."
-                        />
-                        <FeatureCard
-                            icon={<Package className="h-8 w-8 text-indigo-600" />}
-                            title="منتجات متنوعة"
-                            description="نضمن لك منتجات يومية متنوعة مختارة بعناية من أفضل الموردين المحليين."
-                        />
-                        <FeatureCard
-                            icon={<Star className="h-8 w-8 text-amber-500" />}
-                            title="برنامج الولاء"
-                            description="اكسب نقاط مع كل عملية شراء واستبدلها بخصومات ومكافآت حصرية."
-                        />
-                        <FeatureCard
-                            icon={<MapPin className="h-8 w-8 text-emerald-600" />}
-                            title="تغطية واسعة"
-                            description="نصل إليك أينما كنت، ونخدم حيك بعناية واهتمام شخصي."
-                        />
-                    </div>
-                </div>
-            </section>
-
-            {/* CTA Section */}
-            <section className="py-20 bg-blue-600 relative overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-indigo-700"></div>
-                <div className="relative max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center text-white">
-                    <h2 className="text-4xl md:text-5xl font-bold mb-8">
-                        جاهز لتجربة تسوق مختلفة؟
-                    </h2>
-                    <p className="text-xl md:text-2xl text-blue-100 mb-10 max-w-3xl mx-auto">
-                        انضم إلى آلاف العملاء السعداء واستمتع بتجربة تسوق سهلة، سريعة،
-                        وموثوقة.
-                    </p>
-
-                    {user ? (
-                        <Link
-                            className=" inline-flex items-center justify-center text-white px-8 py-4 rounded-xl font-bold text-lg"
-                            href="/products"
-                        >
-                            <Button variant="text" sx={{
-                                borderRadius: "12px",
-                                backgroundColor: "#ffffff",
-                                fontFamily: "'Cairo', sans-serif",
-                                ":hover": {
-                                    backgroundColor: "#ffffff",
-                                },
-                                display: "inline-flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                color: "#000000",
-                                px: 6,        // 8 * 4px = 32px
-                                py: 2.5,        // 4 * 4px = 16px
-                                fontWeight: "bold",
-                                fontSize: "1.125rem", // text-lg
-                                boxShadow: "0 10px 15px -3px rgba(37, 99, 235, 0.2), 0 4px 6px -2px rgba(37, 99, 235, 0.2)",
-                            }}>
-
-                                ابدا التسوق الآن
-
-                            </Button>
-                        </Link>
-                    ) : (
-                        <Link
-                            href="/signup">
-                            <Button variant="contained" sx={{
-                                borderRadius: "12px",
-                                backgroundColor: "#ffffff",
-                                fontFamily: "'Cairo', sans-serif",
-                                ":hover": {
-                                    backgroundColor: "#ffffff",
-                                },
-                                display: "inline-flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                color: "#000000",
-                                px: 6,        // 8 * 4px = 32px
-                                py: 2.5,        // 4 * 4px = 16px
-                                fontWeight: "bold",
-                                fontSize: "1.125rem", // text-lg
-                                boxShadow: "0 10px 15px -3px rgba(37, 99, 235, 0.2), 0 4px 6px -2px rgba(37, 99, 235, 0.2)",
-                            }}> إنشاء حساب مجاني</Button>
-
-                        </Link>
-                    )}
-                </div>
-            </section >
-
-            {/* Contact Section */}
-            < section className="py-24 bg-slate-50" >
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="grid lg:grid-cols-2 gap-12 items-center bg-white rounded-3xl p-8 md:p-12 shadow-xl">
-                        <div className="text-right">
-                            <h2 className="text-3xl font-bold text-slate-900 mb-6">
-                                نحن هنا لمساعدتك
-                            </h2>
-                            <p className="text-lg text-slate-600 mb-8">
-                                فريق الدعم لدينا جاهز للإجابة على استفساراتك ومساعدتك في أي وقت.
-                                لا تتردد في التواصل معنا.
-                            </p>
-
-                            <div className="space-y-6">
-                                <div className="flex items-center gap-6 p-4 rounded-2xl bg-blue-50 border border-blue-100 transition-colors hover:bg-blue-100">
-                                    <div className="bg-blue-600 p-3 rounded-xl text-white">
-                                        <Phone className="h-6 w-6" />
-                                    </div>
-                                    <div>
-                                        <h3 className="font-bold text-slate-900">اتصل بنا</h3>
-                                        <p
-                                            dir="ltr"
-                                            className="text-blue-700 font-semibold mt-1 text-lg"
-                                        >
-                                            +963 995 696 426
-                                        </p>
-                                    </div>
-                                </div>
-
-                                <div className="flex items-center gap-6 p-4 rounded-2xl bg-slate-50 border border-slate-100 transition-colors hover:bg-slate-100">
-                                    <div className="bg-slate-800 p-3 rounded-xl text-white">
-                                        <Clock className="h-6 w-6" />
-                                    </div>
-                                    <div>
-                                        <h3 className="font-bold text-slate-900">ساعات العمل</h3>
-                                        <p className="text-slate-600 mt-1">
-                                            يومياً: 9:00 ص - 10:00 م
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="relative h-full min-h-[300px] bg-blue-600 rounded-2xl overflow-hidden flex items-center justify-center p-8 text-white text-center">
-                            <div className="absolute inset-0 bg-gradient-to-br from-blue-600 to-indigo-600"></div>
-                            <div className="relative z-10">
-                                <h3 className="text-2xl font-bold mb-4">هل لديك سؤال؟</h3>
-                                <p className="mb-6 text-blue-100">
-                                    تواصل معنا عبر الواتساب لرد أسرع
-                                </p>
-                                <Button variant="text" sx={{
-                                    borderRadius: "12px",
-                                    backgroundColor: "#ffffff",
-                                    fontFamily: "'Cairo', sans-serif",
-                                    ":hover": {
-                                        backgroundColor: "#ffffff",
-                                    },
-                                    display: "inline-flex",
-                                    alignItems: "center",
-                                    justifyContent: "center",
-                                    color: "#000000",
-                                    px: 3,        // 8 * 4px = 32px
-                                    py: 1.5,        // 4 * 4px = 16px
-                                    fontWeight: "bold",
-                                    fontSize: "1.125rem", // text-lg
-                                    boxShadow: "0 10px 15px -3px rgba(37, 99, 235, 0.2), 0 4px 6px -2px rgba(37, 99, 235, 0.2)",
-                                }}>
-                                    <Phone className="w-5 h-5 ml-2 " />
-                                    تواصل عبر واتساب
-                                </Button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </section >
-
-            {/* Footer */}
-            < footer className="bg-slate-900 text-white py-12 border-t border-slate-800" >
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="flex flex-col md:flex-row justify-between items-center gap-6">
-                        <div className="text-center md:text-right">
-                            <span className="text-3xl font-extrabold bg-gradient-to-r from-blue-400 to-indigo-400 bg-clip-text text-transparent">
-                                We Deliver
-                            </span>
-                            <p className="text-slate-400 mt-2 text-sm">
-                                شريكك الموثوق للتسوق اليومي
-                            </p>
-                        </div>
-                        <div className="flex gap-8 text-slate-400">
-                            <Link href="#" className="hover:text-white transition-colors">
-                                من نحن
-                            </Link>
-                            <Link href="#" className="hover:text-white transition-colors">
-                                الشروط والأحكام
-                            </Link>
-                            <Link href="#" className="hover:text-white transition-colors">
-                                الخصوصية
-                            </Link>
-                        </div>
-                        <p className="text-slate-500 text-sm">
-                            © {new Date().getFullYear()} We Delivery. جميع الحقوق محفوظة.
-                        </p>
-                    </div>
-                </div>
-            </footer >
-        </div >
-    );
+      <footer className="border-t border-slate-200">
+        <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 px-4 py-8 text-sm text-slate-500 sm:flex-row sm:px-6 lg:px-8">
+          <span className="flex items-center gap-2 font-bold text-[#0b1a2a]">
+            <Image src="/logo.png" alt="" width={36} height={36} />
+            We Deliver
+          </span>
+          <nav className="flex gap-6" aria-label="روابط سريعة">
+            <Link href="/products" className="hover:text-[#0a79c4]">
+              المنتجات
+            </Link>
+            <Link
+              href={user ? "/orders" : "/login"}
+              className="hover:text-[#0a79c4]"
+            >
+              {user ? "طلباتي" : "تسجيل الدخول"}
+            </Link>
+          </nav>
+          <span>© {new Date().getFullYear()} We Delivery</span>
+        </div>
+      </footer>
+    </div>
+  );
 }
