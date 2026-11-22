@@ -9,7 +9,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@mui/material";
 
 export default function Navigation() {
-  const { user, profile, signOut } = useAuth();
+  const { user, profile, profileLoading, signOut } = useAuth();
   const { getTotalItems } = useCart();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -125,7 +125,13 @@ export default function Navigation() {
                   >
                     <User className="h-5 w-5 text-gray-700" />
                     <span className="text-sm pl-2 font-medium hover:text-blue-600 text-gray-700 max-w-[10rem] truncate">
-                      {profile?.name || "User"}
+                      {profileLoading ? (
+                        <span className="h-4 w-20 animate-pulse rounded bg-gray-200" />
+                      ) : (
+                        profile?.name ||
+                        user.user_metadata?.full_name ||
+                        user.email?.split("@")[0]
+                      )}
                     </span>
                     {profile?.points && profile.points > 0 && (
                       <p className="text-xs bg-blue-100 text-blue-800 px-4 py-1 rounded-full">
@@ -139,13 +145,18 @@ export default function Navigation() {
                     className="flex items-center space-x-1 text-gray-700 hover:text-red-600 cursor-pointer transition-colors"
                   >
                     <LogOut className="h-4 w-4" />
-                    <Button variant="text" sx={{
-                      color: "black",
-                      ":hover": {
-                        color: "red",
-                        transition: "all 0.3s ease-in-out",
-                      }
-                    }}>تسجيل الخروج</Button>
+                    <Button
+                      variant="text"
+                      sx={{
+                        color: "black",
+                        ":hover": {
+                          color: "red",
+                          transition: "all 0.3s ease-in-out",
+                        },
+                      }}
+                    >
+                      تسجيل الخروج
+                    </Button>
                   </div>
                 </div>
               </div>
