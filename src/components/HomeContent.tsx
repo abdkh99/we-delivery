@@ -35,8 +35,8 @@ const steps = [
 
 const btn =
   "inline-flex items-center justify-center rounded-full px-8 py-3.5 text-lg font-bold transition-colors focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#0a79c4]";
-const btnPrimary = `${btn} bg-[#0a79c4] text-white hover:bg-[#0868a8]`;
-const btnGhost = `${btn} bg-white text-[#0b1a2a] ring-1 ring-slate-300 hover:ring-[#0a79c4]`;
+const btnPrimary = `${btn} bg-[#0a79c4] text-white hover:bg-[#0868a8] hover:scale-101 active:scale-95`;
+const btnGhost = `${btn} bg-white text-[#0b1a2a] ring-1 ring-slate-300 hover:text-[#0a79c4] hover:scale-101 active:scale-95`;
 
 function LatestProducts() {
   const { data, error, isLoading } = useSWR<{ products: HomeProduct[] }>(
@@ -298,7 +298,7 @@ export default function HomeContent({ shouldShowLoader }: HomeContentProps) {
               <Link href="/products" className={btnPrimary}>
                 تصفّح المنتجات
               </Link>
-              <Link href={user ? "/orders" : "/signup"} className={btnGhost}>
+              <Link  href={user ? "/orders" : "/signup"} className={btnGhost}>
                 {user ? "طلباتي" : "إنشاء حساب"}
               </Link>
             </div>

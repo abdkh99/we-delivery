@@ -11,7 +11,7 @@ export const CART_LIMITS = {
   MAX_TOTAL_ITEMS: 30,
   
   // Default max order value in SYP (admin can change via commission_settings)
-  DEFAULT_MAX_ORDER_VALUE: 10000,
+  DEFAULT_MAX_ORDER_VALUE: 1000000,
   
   // Exchange rate safety bounds (SYP per USD)
   // If rate is within this range, disable max order limit

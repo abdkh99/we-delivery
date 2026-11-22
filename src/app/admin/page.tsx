@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import Navigation from "@/components/Navigation";
 import CommissionSettings from "@/components/CommissionSettings";
@@ -8,6 +8,7 @@ import DeliveryFeeSettings from "@/components/DeliveryFeeSettings";
 import NotificationSettings from "@/components/NotificationSettings";
 import GeneralSettings from "@/components/GeneralSettings";
 import DriverManagementComponent from "@/components/DriverManagementComponent";
+import UserRoleManagement from "@/components/UserRoleManagement";
 import { useAuth } from "@/contexts/AuthContext";
 import { Database } from "@/types/database";
 import {
@@ -42,7 +43,16 @@ import {
   Zap,
   Bell,
 } from "lucide-react";
-import { CircularProgress, Box, FormControl, InputLabel, Select as MuiSelect, MenuItem as MuiMenuItem, ButtonBase, Button } from "@mui/material";
+import {
+  CircularProgress,
+  Box,
+  FormControl,
+  InputLabel,
+  Select as MuiSelect,
+  MenuItem as MuiMenuItem,
+  ButtonBase,
+  Button,
+} from "@mui/material";
 import type { SelectChangeEvent } from "@mui/material/Select";
 import ConfirmationModal from "@/components/ConfirmationModal";
 import { toast } from "sonner";
@@ -66,7 +76,7 @@ const adminTheme = createTheme(
     },
     shape: { borderRadius: 12 },
   },
-  arEG
+  arEG,
 );
 
 type Order = Database["public"]["Tables"]["orders"]["Row"] & {
@@ -103,6 +113,9 @@ type Driver = Database["public"]["Tables"]["drivers"]["Row"] & {
 export default function AdminDashboard() {
   const { user, profile, loading: authLoading } = useAuth();
   const [activeTab, setActiveTab] = useState("orders");
+  const [driversRefreshKey, setDriversRefreshKey] = useState(0);
+  const fetchInFlightRef = useRef(false);
+  const fetchFailuresRef = useRef(0);
   const [orders, setOrders] = useState<Order[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [drivers, setDrivers] = useState<Driver[]>([]);
@@ -178,17 +191,48 @@ export default function AdminDashboard() {
   };
 
   useEffect(() => {
-    if (!authLoading && profile?.role === "admin") {
-      fetchData();
-      fetchCurrentRate();
+    if (authLoading || profile?.role !== "admin") return;
 
-      // تحديث تلقائي كل 5 ثواني
-      const interval = setInterval(() => {
-        fetchData();
-      }, 5000);
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
 
-      return () => clearInterval(interval);
-    }
+    const schedule = () => {
+      if (cancelled) return;
+      if (timer) clearTimeout(timer);
+      // تحديث كل 5 ثواني، ويتباطأ حتى 60 ثانية عند تكرار الفشل
+      const delay = Math.min(5000 * 2 ** fetchFailuresRef.current, 60000);
+      timer = setTimeout(tick, delay);
+    };
+
+    const tick = async () => {
+      if (cancelled) return;
+      // لا نحدّث والتبويب مخفي أو الجهاز بدون إنترنت
+      if (!document.hidden && navigator.onLine) {
+        await fetchData();
+      }
+      schedule();
+    };
+
+    // عند رجوع المستخدم للتبويب أو عودة الإنترنت: حدّث فوراً
+    const wakeUp = () => {
+      if (!document.hidden && navigator.onLine) {
+        if (timer) clearTimeout(timer);
+        tick();
+      }
+    };
+
+    fetchCurrentRate();
+    tick();
+    document.addEventListener("visibilitychange", wakeUp);
+    window.addEventListener("online", wakeUp);
+
+    return () => {
+      cancelled = true;
+      if (timer) clearTimeout(timer);
+      document.removeEventListener("visibilitychange", wakeUp);
+      window.removeEventListener("online", wakeUp);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profile, authLoading]);
 
   useEffect(() => {
@@ -198,8 +242,11 @@ export default function AdminDashboard() {
   }, [activeTab, profile]);
 
   const fetchData = async () => {
+    // تجنّب تداخل الطلبات إذا لم ينتهِ الطلب السابق
+    if (fetchInFlightRef.current) return;
+    fetchInFlightRef.current = true;
+
     try {
-      console.log("🔄 Admin: Fetching data...");
       const response = await fetch("/api/admin/dashboard-data");
 
       if (!response.ok) {
@@ -207,19 +254,22 @@ export default function AdminDashboard() {
       }
 
       const data = await response.json();
-
-      console.log("✅ Admin: Data updated", {
-        orders: data.orders?.length,
-        products: data.products?.length,
-        drivers: data.drivers?.length,
-      });
+      fetchFailuresRef.current = 0;
 
       if (data.orders) setOrders(data.orders);
       if (data.products) setProducts(data.products);
       if (data.drivers) setDrivers(data.drivers);
     } catch (error) {
-      console.error("❌ Error fetching admin data:", error);
+      fetchFailuresRef.current += 1;
+      if (error instanceof TypeError) {
+        // "Failed to fetch": انقطاع شبكة / الجهاز كان في وضع السكون / السيرفر يعيد التشغيل.
+        // حالة مؤقتة وسيُعاد الطلب تلقائياً، فلا نستخدم console.error حتى لا تظهر شاشة الخطأ الحمراء.
+        console.warn("Admin data refresh skipped (network issue), will retry");
+      } else {
+        console.error("❌ Error fetching admin data:", error);
+      }
     } finally {
+      fetchInFlightRef.current = false;
       setLoading(false);
     }
   };
@@ -254,7 +304,7 @@ export default function AdminDashboard() {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({ driver_id: driverId }),
-        }
+        },
       );
 
       if (response.ok) {
@@ -287,7 +337,7 @@ export default function AdminDashboard() {
 
       toast.success("تم تحديث سعر الصرف بنجاح ✅", {
         description: `سعر الدولار الآن: ${formatCurrency(
-          rateResult.rate || 0
+          rateResult.rate || 0,
         )} ليرة`,
       });
     } catch (error: any) {
@@ -330,8 +380,9 @@ export default function AdminDashboard() {
 
       const syncResult = await syncResponse.json();
       toast.success("تم تحديث الأسعار بنجاح ✅", {
-        description: `تم تحديث ${syncResult.updatedCount ?? 0
-          } منتجاً. سعر الصرف: ${formatCurrency(rateResult.rate || 0)}`,
+        description: `تم تحديث ${
+          syncResult.updatedCount ?? 0
+        } منتجاً. سعر الصرف: ${formatCurrency(rateResult.rate || 0)}`,
       });
       await fetchData();
     } catch (error: any) {
@@ -363,7 +414,14 @@ export default function AdminDashboard() {
       <div className="min-h-screen adm">
         <Navigation />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "60vh" }}>
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              minHeight: "60vh",
+            }}
+          >
             <CircularProgress size={60} />
           </Box>
         </div>
@@ -407,7 +465,7 @@ export default function AdminDashboard() {
     pendingOrders: orders.filter((o) => o.status === "pending").length,
     totalRevenue: orders.reduce(
       (sum, order) => sum + (Number(order.total_price ?? 0) || 0),
-      0
+      0,
     ),
     totalCommission: orders
       .filter((o) => o.status === "delivered")
@@ -416,7 +474,7 @@ export default function AdminDashboard() {
           order.platform_commission ||
           calculatePlatformCommission(
             Number(order.total_price ?? 0) -
-            (Number(order.delivery_fee ?? 0) || 0)
+              (Number(order.delivery_fee ?? 0) || 0),
           );
         return sum + commission;
       }, 0),
@@ -433,15 +491,15 @@ export default function AdminDashboard() {
     regionFilter === "all"
       ? regionizedOrders
       : regionizedOrders.filter(
-        (order) => extractRegion(order.address_text ?? "") === regionFilter
-      );
+          (order) => extractRegion(order.address_text ?? "") === regionFilter,
+        );
 
   const regions = Array.from(
     new Set(
       orders
         .map((o) => extractRegion(o.address_text ?? ""))
-        .filter((region) => region && region !== "")
-    )
+        .filter((region) => region && region !== ""),
+    ),
   );
 
   // فلترة السائقين حسب المنطقة
@@ -453,7 +511,7 @@ export default function AdminDashboard() {
     }
 
     const regionDrivers = activeDrivers.filter(
-      (driver) => driver.region && driver.region === region
+      (driver) => driver.region && driver.region === region,
     );
 
     return regionDrivers.length > 0 ? regionDrivers : activeDrivers;
@@ -559,36 +617,31 @@ export default function AdminDashboard() {
                 label: "إضافة منتج",
                 href: "/admin/products/new",
                 icon: Plus,
-                color:
-                  "adm-btn-blue",
+                color: "adm-btn-blue",
               },
               {
                 label: "إدارة العروض",
                 href: "/admin/offers",
                 icon: Sparkles,
-                color:
-                  "adm-btn-red",
+                color: "adm-btn-red",
               },
               {
                 label: "إدارة السائقين",
                 href: "/admin",
                 icon: Truck,
-                color:
-                  "adm-btn-green",
+                color: "adm-btn-green",
               },
               {
                 label: "تقرير سريع",
                 href: "/admin/quick-report",
                 icon: Flame,
-                color:
-                  "adm-btn-yellow",
+                color: "adm-btn-yellow",
               },
               {
                 label: "إدارة سعر الصرف",
                 href: "/admin/currency",
                 icon: DollarSign,
-                color:
-                  "adm-btn-blue",
+                color: "adm-btn-blue",
               },
             ].map((action) => (
               <ButtonBase
@@ -613,7 +666,6 @@ export default function AdminDashboard() {
             ))}
           </div>
 
-
           {/* Main Content Tabs */}
           <div className="adm-card overflow-hidden">
             <div className="border-b border-[#e7e5df] bg-[#faf9f5]">
@@ -637,25 +689,25 @@ export default function AdminDashboard() {
 
                       ...(activeTab === tab.id
                         ? {
-                          borderColor: "#7fb9dc",
-                          color: "#1f4e6b",
-                          backgroundColor: "#dcedf8",
-                        }
+                            borderColor: "#7fb9dc",
+                            color: "#1f4e6b",
+                            backgroundColor: "#dcedf8",
+                          }
                         : {
-                          borderColor: "transparent",
-                          color: "#6b7280",
+                            borderColor: "transparent",
+                            color: "#6b7280",
 
-                          "&:hover": {
-                            color: "#1f2430",
-                            borderColor: "#d4d1c7",
-                            backgroundColor: "#f1efe7",
-                          },
-                        }),
+                            "&:hover": {
+                              color: "#1f2430",
+                              borderColor: "#d4d1c7",
+                              backgroundColor: "#f1efe7",
+                            },
+                          }),
                     }}
-
                     variant="text"
                     key={tab.id}
-                    onClick={() => setActiveTab(tab.id)}>
+                    onClick={() => setActiveTab(tab.id)}
+                  >
                     <tab.icon className="h-4 w-4 sm:h-5 sm:w-5 inline mr-1 sm:mr-2" />
                     <span className="whitespace-nowrap">{tab.name}</span>
                   </Button>
@@ -675,58 +727,185 @@ export default function AdminDashboard() {
                     {/* Filters */}
                     <div className="flex gap-3 flex-wrap">
                       <FormControl size="small" sx={{ minWidth: 180 }}>
-                        <InputLabel id="status-filter-label" sx={{ fontFamily: 'inherit', fontWeight: 'bold', fontSize: '0.875rem', '&.Mui-focused': { color: '#2d6a8f' } }}>الحالة</InputLabel>
+                        <InputLabel
+                          id="status-filter-label"
+                          sx={{
+                            fontFamily: "inherit",
+                            fontWeight: "bold",
+                            fontSize: "0.875rem",
+                            "&.Mui-focused": { color: "#2d6a8f" },
+                          }}
+                        >
+                          الحالة
+                        </InputLabel>
                         <MuiSelect
                           labelId="status-filter-label"
                           value={statusFilter}
                           label="الحالة"
-                          onChange={(e: SelectChangeEvent) => setStatusFilter(e.target.value)}
+                          onChange={(e: SelectChangeEvent) =>
+                            setStatusFilter(e.target.value)
+                          }
                           sx={{
-                            borderRadius: '0.75rem',
-                            fontFamily: 'inherit',
-                            fontWeight: 'bold',
-                            fontSize: '0.875rem',
-                            backgroundColor: 'white',
-                            boxShadow: 'none',
-                            '& .MuiOutlinedInput-notchedOutline': { borderColor: '#d1d5db', borderWidth: 2 },
-                            '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#7fb9dc' },
-                            '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#2563eb' },
+                            borderRadius: "0.75rem",
+                            fontFamily: "inherit",
+                            fontWeight: "bold",
+                            fontSize: "0.875rem",
+                            backgroundColor: "white",
+                            boxShadow: "none",
+                            "& .MuiOutlinedInput-notchedOutline": {
+                              borderColor: "#d1d5db",
+                              borderWidth: 2,
+                            },
+                            "&:hover .MuiOutlinedInput-notchedOutline": {
+                              borderColor: "#7fb9dc",
+                            },
+                            "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
+                              borderColor: "#2563eb",
+                            },
                           }}
-                          MenuProps={{ disableScrollLock: true, PaperProps: { sx: { borderRadius: '0.75rem', mt: 0.5, boxShadow: '0 4px 14px rgba(31,36,48,0.08)' } } }}
+                          MenuProps={{
+                            disableScrollLock: true,
+                            PaperProps: {
+                              sx: {
+                                borderRadius: "0.75rem",
+                                mt: 0.5,
+                                boxShadow: "0 4px 14px rgba(31,36,48,0.08)",
+                              },
+                            },
+                          }}
                         >
-                          <MuiMenuItem value="all" sx={{ fontFamily: 'inherit', fontWeight: 'bold', fontSize: '0.875rem' }}> جميع الحالات</MuiMenuItem>
-                          <MuiMenuItem value="pending" sx={{ fontFamily: 'inherit', fontWeight: 'bold', fontSize: '0.875rem' }}>⏳ قيد الانتظار</MuiMenuItem>
-                          <MuiMenuItem value="confirmed" sx={{ fontFamily: 'inherit', fontWeight: 'bold', fontSize: '0.875rem' }}>✅ مؤكد</MuiMenuItem>
-                          <MuiMenuItem value="on_delivery" sx={{ fontFamily: 'inherit', fontWeight: 'bold', fontSize: '0.875rem' }}>🚚 جاري التوصيل</MuiMenuItem>
-                          <MuiMenuItem value="delivered" sx={{ fontFamily: 'inherit', fontWeight: 'bold', fontSize: '0.875rem' }}>📦 تم التوصيل</MuiMenuItem>
-                          <MuiMenuItem value="cancelled" sx={{ fontFamily: 'inherit', fontWeight: 'bold', fontSize: '0.875rem' }}>❌ ملغي</MuiMenuItem>
+                          <MuiMenuItem
+                            value="all"
+                            sx={{
+                              fontFamily: "inherit",
+                              fontWeight: "bold",
+                              fontSize: "0.875rem",
+                            }}
+                          >
+                            {" "}
+                            جميع الحالات
+                          </MuiMenuItem>
+                          <MuiMenuItem
+                            value="pending"
+                            sx={{
+                              fontFamily: "inherit",
+                              fontWeight: "bold",
+                              fontSize: "0.875rem",
+                            }}
+                          >
+                            ⏳ قيد الانتظار
+                          </MuiMenuItem>
+                          <MuiMenuItem
+                            value="confirmed"
+                            sx={{
+                              fontFamily: "inherit",
+                              fontWeight: "bold",
+                              fontSize: "0.875rem",
+                            }}
+                          >
+                            ✅ مؤكد
+                          </MuiMenuItem>
+                          <MuiMenuItem
+                            value="on_delivery"
+                            sx={{
+                              fontFamily: "inherit",
+                              fontWeight: "bold",
+                              fontSize: "0.875rem",
+                            }}
+                          >
+                            🚚 جاري التوصيل
+                          </MuiMenuItem>
+                          <MuiMenuItem
+                            value="delivered"
+                            sx={{
+                              fontFamily: "inherit",
+                              fontWeight: "bold",
+                              fontSize: "0.875rem",
+                            }}
+                          >
+                            📦 تم التوصيل
+                          </MuiMenuItem>
+                          <MuiMenuItem
+                            value="cancelled"
+                            sx={{
+                              fontFamily: "inherit",
+                              fontWeight: "bold",
+                              fontSize: "0.875rem",
+                            }}
+                          >
+                            ❌ ملغي
+                          </MuiMenuItem>
                         </MuiSelect>
                       </FormControl>
 
                       {regions.length > 0 && (
                         <FormControl size="small" sx={{ minWidth: 180 }}>
-                          <InputLabel id="region-filter-label" sx={{ fontFamily: 'inherit', fontWeight: 'bold', fontSize: '0.875rem', '&.Mui-focused': { color: '#2d6a8f' } }}>المنطقة</InputLabel>
+                          <InputLabel
+                            id="region-filter-label"
+                            sx={{
+                              fontFamily: "inherit",
+                              fontWeight: "bold",
+                              fontSize: "0.875rem",
+                              "&.Mui-focused": { color: "#2d6a8f" },
+                            }}
+                          >
+                            المنطقة
+                          </InputLabel>
                           <MuiSelect
                             labelId="region-filter-label"
                             value={regionFilter}
                             label="المنطقة"
-                            onChange={(e: SelectChangeEvent) => setRegionFilter(e.target.value)}
+                            onChange={(e: SelectChangeEvent) =>
+                              setRegionFilter(e.target.value)
+                            }
                             sx={{
-                              borderRadius: '0.75rem',
-                              fontFamily: 'inherit',
-                              fontWeight: 'bold',
-                              fontSize: '0.875rem',
-                              backgroundColor: 'white',
-                              boxShadow: 'none',
-                              '& .MuiOutlinedInput-notchedOutline': { borderColor: '#d1d5db', borderWidth: 2 },
-                              '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#7fb9dc' },
-                              '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#7c3aed' },
+                              borderRadius: "0.75rem",
+                              fontFamily: "inherit",
+                              fontWeight: "bold",
+                              fontSize: "0.875rem",
+                              backgroundColor: "white",
+                              boxShadow: "none",
+                              "& .MuiOutlinedInput-notchedOutline": {
+                                borderColor: "#d1d5db",
+                                borderWidth: 2,
+                              },
+                              "&:hover .MuiOutlinedInput-notchedOutline": {
+                                borderColor: "#7fb9dc",
+                              },
+                              "&.Mui-focused .MuiOutlinedInput-notchedOutline":
+                                { borderColor: "#7c3aed" },
                             }}
-                            MenuProps={{ disableScrollLock: true, PaperProps: { sx: { borderRadius: '0.75rem', mt: 0.5, boxShadow: '0 4px 14px rgba(31,36,48,0.08)' } } }}
+                            MenuProps={{
+                              disableScrollLock: true,
+                              PaperProps: {
+                                sx: {
+                                  borderRadius: "0.75rem",
+                                  mt: 0.5,
+                                  boxShadow: "0 4px 14px rgba(31,36,48,0.08)",
+                                },
+                              },
+                            }}
                           >
-                            <MuiMenuItem value="all" sx={{ fontFamily: 'inherit', fontWeight: 'bold', fontSize: '0.875rem' }}>📍 جميع المناطق</MuiMenuItem>
+                            <MuiMenuItem
+                              value="all"
+                              sx={{
+                                fontFamily: "inherit",
+                                fontWeight: "bold",
+                                fontSize: "0.875rem",
+                              }}
+                            >
+                              📍 جميع المناطق
+                            </MuiMenuItem>
                             {regions.map((region) => (
-                              <MuiMenuItem key={region} value={region} sx={{ fontFamily: 'inherit', fontWeight: 'bold', fontSize: '0.875rem' }}>
+                              <MuiMenuItem
+                                key={region}
+                                value={region}
+                                sx={{
+                                  fontFamily: "inherit",
+                                  fontWeight: "bold",
+                                  fontSize: "0.875rem",
+                                }}
+                              >
                                 {region}
                               </MuiMenuItem>
                             ))}
@@ -739,10 +918,7 @@ export default function AdminDashboard() {
                   {/* Mobile Orders List */}
                   <div className="space-y-3 sm:hidden">
                     {filteredOrders.map((order) => (
-                      <div
-                        key={order.id}
-                        className="adm-card adm-hover p-4"
-                      >
+                      <div key={order.id} className="adm-card adm-hover p-4">
                         <div className="flex justify-between items-start mb-3">
                           <div>
                             <div className="text-sm font-bold text-gray-900">
@@ -753,16 +929,17 @@ export default function AdminDashboard() {
                             </div>
                           </div>
                           <span
-                            className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold ring-1 ring-inset ${order.status === "pending"
-                              ? "bg-[#fbf6cf] text-[#6f5d0c] ring-[#ecdf86]"
-                              : order.status === "confirmed"
-                                ? "bg-[#dcedf8] text-[#1f4e6b] ring-[#a9d3ea]"
-                                : order.status === "on_delivery"
-                                  ? "bg-[#fde6d2] text-[#8a4e17] ring-[#f3c9a0]"
-                                  : order.status === "delivered"
-                                    ? "bg-[#e0f3e2] text-[#265f30] ring-[#b7e2bb]"
-                                    : "bg-[#f9d5d5] text-[#7f2c2c] ring-[#eeb0b0]"
-                              }`}
+                            className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold ring-1 ring-inset ${
+                              order.status === "pending"
+                                ? "bg-[#fbf6cf] text-[#6f5d0c] ring-[#ecdf86]"
+                                : order.status === "confirmed"
+                                  ? "bg-[#dcedf8] text-[#1f4e6b] ring-[#a9d3ea]"
+                                  : order.status === "on_delivery"
+                                    ? "bg-[#fde6d2] text-[#8a4e17] ring-[#f3c9a0]"
+                                    : order.status === "delivered"
+                                      ? "bg-[#e0f3e2] text-[#265f30] ring-[#b7e2bb]"
+                                      : "bg-[#f9d5d5] text-[#7f2c2c] ring-[#eeb0b0]"
+                            }`}
                           >
                             {formatOrderStatus(order.status)}
                           </span>
@@ -770,19 +947,25 @@ export default function AdminDashboard() {
 
                         <div className="space-y-2 mb-3">
                           <div className="flex justify-between text-sm">
-                            <span className="text-gray-600 font-medium">العميل:</span>
+                            <span className="text-gray-600 font-medium">
+                              العميل:
+                            </span>
                             <span className="text-gray-900 font-bold">
                               {order.users?.name ?? "-"}
                             </span>
                           </div>
                           <div className="flex justify-between text-sm">
-                            <span className="text-gray-600 font-medium">الهاتف:</span>
+                            <span className="text-gray-600 font-medium">
+                              الهاتف:
+                            </span>
                             <span className="text-gray-900 font-bold">
                               {order.users?.phone ?? "-"}
                             </span>
                           </div>
                           <div className="flex justify-between text-sm">
-                            <span className="text-gray-600 font-medium">المجموع:</span>
+                            <span className="text-gray-600 font-medium">
+                              المجموع:
+                            </span>
                             <span className="text-[#265f30] font-bold">
                               {formatCurrency(Number(order.total_price ?? 0))}
                             </span>
@@ -809,8 +992,21 @@ export default function AdminDashboard() {
                                 تأكيد
                               </button>
                               {drivers.length > 0 && (
-                                <FormControl size="small" sx={{ flex: 1, minWidth: 140 }}>
-                                  <InputLabel id={`mobile-driver-label-${order.id}`} sx={{ fontFamily: 'inherit', fontWeight: 'bold', fontSize: '0.875rem', '&.Mui-focused': { color: '#2d6a8f' } }}>السائق</InputLabel>
+                                <FormControl
+                                  size="small"
+                                  sx={{ flex: 1, minWidth: 140 }}
+                                >
+                                  <InputLabel
+                                    id={`mobile-driver-label-${order.id}`}
+                                    sx={{
+                                      fontFamily: "inherit",
+                                      fontWeight: "bold",
+                                      fontSize: "0.875rem",
+                                      "&.Mui-focused": { color: "#2d6a8f" },
+                                    }}
+                                  >
+                                    السائق
+                                  </InputLabel>
                                   <MuiSelect
                                     labelId={`mobile-driver-label-${order.id}`}
                                     value=""
@@ -821,22 +1017,45 @@ export default function AdminDashboard() {
                                       }
                                     }}
                                     sx={{
-                                      borderRadius: '0.5rem',
-                                      fontFamily: 'inherit',
-                                      fontWeight: 'bold',
-                                      fontSize: '0.875rem',
-                                      backgroundColor: 'white',
-                                      boxShadow: 'none',
-                                      '& .MuiOutlinedInput-notchedOutline': { borderColor: '#d1d5db', borderWidth: 2 },
-                                      '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#7fb9dc' },
-                                      '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#7c3aed' },
+                                      borderRadius: "0.5rem",
+                                      fontFamily: "inherit",
+                                      fontWeight: "bold",
+                                      fontSize: "0.875rem",
+                                      backgroundColor: "white",
+                                      boxShadow: "none",
+                                      "& .MuiOutlinedInput-notchedOutline": {
+                                        borderColor: "#d1d5db",
+                                        borderWidth: 2,
+                                      },
+                                      "&:hover .MuiOutlinedInput-notchedOutline":
+                                        { borderColor: "#7fb9dc" },
+                                      "&.Mui-focused .MuiOutlinedInput-notchedOutline":
+                                        { borderColor: "#7c3aed" },
                                     }}
-                                    MenuProps={{ disableScrollLock: true, PaperProps: { sx: { borderRadius: '0.75rem', mt: 0.5, boxShadow: '0 4px 14px rgba(31,36,48,0.08)' } } }}
+                                    MenuProps={{
+                                      disableScrollLock: true,
+                                      PaperProps: {
+                                        sx: {
+                                          borderRadius: "0.75rem",
+                                          mt: 0.5,
+                                          boxShadow:
+                                            "0 4px 14px rgba(31,36,48,0.08)",
+                                        },
+                                      },
+                                    }}
                                   >
                                     {getDriversForRegion(
-                                      extractRegion(order.address_text ?? "")
+                                      extractRegion(order.address_text ?? ""),
                                     ).map((driver) => (
-                                      <MuiMenuItem key={driver.id} value={driver.id} sx={{ fontFamily: 'inherit', fontWeight: 'bold', fontSize: '0.875rem' }}>
+                                      <MuiMenuItem
+                                        key={driver.id}
+                                        value={driver.id}
+                                        sx={{
+                                          fontFamily: "inherit",
+                                          fontWeight: "bold",
+                                          fontSize: "0.875rem",
+                                        }}
+                                      >
                                         {driver.users?.name ?? "سائق"}{" "}
                                         {driver.vehicle_info
                                           ? `- ${driver.vehicle_info}`
@@ -877,7 +1096,10 @@ export default function AdminDashboard() {
                       </thead>
                       <tbody className="bg-white divide-y divide-gray-200">
                         {filteredOrders.map((order) => (
-                          <tr key={order.id} className="hover:bg-[#faf9f5] transition-colors">
+                          <tr
+                            key={order.id}
+                            className="hover:bg-[#faf9f5] transition-colors"
+                          >
                             <td className="px-6 py-4 whitespace-nowrap">
                               <div>
                                 <div className="text-sm font-bold text-gray-900">
@@ -898,16 +1120,17 @@ export default function AdminDashboard() {
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
                               <span
-                                className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ring-1 ring-inset ${order.status === "pending"
-                                  ? "bg-[#fbf6cf] text-[#6f5d0c] ring-[#ecdf86]"
-                                  : order.status === "confirmed"
-                                    ? "bg-[#dcedf8] text-[#1f4e6b] ring-[#a9d3ea]"
-                                    : order.status === "on_delivery"
-                                      ? "bg-[#fde6d2] text-[#8a4e17] ring-[#f3c9a0]"
-                                      : order.status === "delivered"
-                                        ? "bg-[#e0f3e2] text-[#265f30] ring-[#b7e2bb]"
-                                        : "bg-[#f9d5d5] text-[#7f2c2c] ring-[#eeb0b0]"
-                                  }`}
+                                className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ring-1 ring-inset ${
+                                  order.status === "pending"
+                                    ? "bg-[#fbf6cf] text-[#6f5d0c] ring-[#ecdf86]"
+                                    : order.status === "confirmed"
+                                      ? "bg-[#dcedf8] text-[#1f4e6b] ring-[#a9d3ea]"
+                                      : order.status === "on_delivery"
+                                        ? "bg-[#fde6d2] text-[#8a4e17] ring-[#f3c9a0]"
+                                        : order.status === "delivered"
+                                          ? "bg-[#e0f3e2] text-[#265f30] ring-[#b7e2bb]"
+                                          : "bg-[#f9d5d5] text-[#7f2c2c] ring-[#eeb0b0]"
+                                }`}
                               >
                                 {formatOrderStatus(order.status)}
                               </span>
@@ -936,34 +1159,78 @@ export default function AdminDashboard() {
                                       تأكيد
                                     </button>
                                     {drivers.length > 0 && (
-                                      <FormControl size="small" sx={{ minWidth: 160 }}>
-                                        <InputLabel id={`desktop-driver-label-${order.id}`} sx={{ fontFamily: 'inherit', fontWeight: 'bold', fontSize: '0.875rem', '&.Mui-focused': { color: '#2d6a8f' } }}>السائق</InputLabel>
+                                      <FormControl
+                                        size="small"
+                                        sx={{ minWidth: 160 }}
+                                      >
+                                        <InputLabel
+                                          id={`desktop-driver-label-${order.id}`}
+                                          sx={{
+                                            fontFamily: "inherit",
+                                            fontWeight: "bold",
+                                            fontSize: "0.875rem",
+                                            "&.Mui-focused": {
+                                              color: "#2d6a8f",
+                                            },
+                                          }}
+                                        >
+                                          السائق
+                                        </InputLabel>
                                         <MuiSelect
                                           labelId={`desktop-driver-label-${order.id}`}
                                           value=""
                                           label="السائق"
                                           onChange={(e: SelectChangeEvent) => {
                                             if (e.target.value) {
-                                              assignDriver(order.id, e.target.value);
+                                              assignDriver(
+                                                order.id,
+                                                e.target.value,
+                                              );
                                             }
                                           }}
                                           sx={{
-                                            borderRadius: '0.5rem',
-                                            fontFamily: 'inherit',
-                                            fontWeight: 'bold',
-                                            fontSize: '0.875rem',
-                                            backgroundColor: 'white',
-                                            boxShadow: 'none',
-                                            '& .MuiOutlinedInput-notchedOutline': { borderColor: '#d1d5db', borderWidth: 2 },
-                                            '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#7fb9dc' },
-                                            '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#7c3aed' },
+                                            borderRadius: "0.5rem",
+                                            fontFamily: "inherit",
+                                            fontWeight: "bold",
+                                            fontSize: "0.875rem",
+                                            backgroundColor: "white",
+                                            boxShadow: "none",
+                                            "& .MuiOutlinedInput-notchedOutline":
+                                              {
+                                                borderColor: "#d1d5db",
+                                                borderWidth: 2,
+                                              },
+                                            "&:hover .MuiOutlinedInput-notchedOutline":
+                                              { borderColor: "#7fb9dc" },
+                                            "&.Mui-focused .MuiOutlinedInput-notchedOutline":
+                                              { borderColor: "#7c3aed" },
                                           }}
-                                          MenuProps={{ disableScrollLock: true, PaperProps: { sx: { borderRadius: '0.75rem', mt: 0.5, boxShadow: '0 4px 14px rgba(31,36,48,0.08)' } } }}
+                                          MenuProps={{
+                                            disableScrollLock: true,
+                                            PaperProps: {
+                                              sx: {
+                                                borderRadius: "0.75rem",
+                                                mt: 0.5,
+                                                boxShadow:
+                                                  "0 4px 14px rgba(31,36,48,0.08)",
+                                              },
+                                            },
+                                          }}
                                         >
                                           {getDriversForRegion(
-                                            extractRegion(order.address_text ?? "")
+                                            extractRegion(
+                                              order.address_text ?? "",
+                                            ),
                                           ).map((driver) => (
-                                            <MuiMenuItem key={driver.id} value={driver.id} sx={{ fontFamily: 'inherit', fontWeight: 'bold', fontSize: '0.875rem' }}>
+                                            <MuiMenuItem
+                                              key={driver.id}
+                                              value={driver.id}
+                                              sx={{
+                                                fontFamily: "inherit",
+                                                fontWeight: "bold",
+                                                fontSize: "0.875rem",
+                                              }}
+                                            >
                                               {driver.users?.name ?? "سائق"}{" "}
                                               {driver.vehicle_info
                                                 ? `- ${driver.vehicle_info}`
@@ -1023,7 +1290,10 @@ export default function AdminDashboard() {
                       </thead>
                       <tbody className="bg-white divide-y divide-gray-200">
                         {products.map((product) => (
-                          <tr key={product.id} className="hover:bg-[#faf9f5] transition-colors">
+                          <tr
+                            key={product.id}
+                            className="hover:bg-[#faf9f5] transition-colors"
+                          >
                             <td className="px-6 py-4 whitespace-nowrap">
                               <div className="text-sm font-semibold text-gray-900">
                                 {product.name}
@@ -1064,7 +1334,14 @@ export default function AdminDashboard() {
               )}
 
               {/* Drivers Tab */}
-              {activeTab === "drivers" && <DriverManagementComponent />}
+              {activeTab === "drivers" && (
+                <>
+                  <DriverManagementComponent key={driversRefreshKey} />
+                  <UserRoleManagement
+                    onRoleChanged={() => setDriversRefreshKey((k) => k + 1)}
+                  />
+                </>
+              )}
 
               {/* Reports Tab */}
               {activeTab === "reports" && (
@@ -1079,8 +1356,9 @@ export default function AdminDashboard() {
                       className="adm-btn adm-btn-blue gap-2 px-4 py-2 disabled:opacity-50"
                     >
                       <RefreshCcw
-                        className={`h-4 w-4 ${reportsLoading ? "animate-spin" : ""
-                          }`}
+                        className={`h-4 w-4 ${
+                          reportsLoading ? "animate-spin" : ""
+                        }`}
                       />
                       تحديث
                     </button>
@@ -1111,7 +1389,10 @@ export default function AdminDashboard() {
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-200">
                           {driverReports.map((report: any) => (
-                            <tr key={report.driver?.id} className="hover:bg-[#faf9f5] transition-colors">
+                            <tr
+                              key={report.driver?.id}
+                              className="hover:bg-[#faf9f5] transition-colors"
+                            >
                               <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">
                                 {report.driver?.name || "غير محدد"}
                               </td>
@@ -1148,7 +1429,9 @@ export default function AdminDashboard() {
                       </div>
                       إعدادات النظام
                     </h2>
-                    <p className="text-[#6b7280] mt-2">إدارة جميع إعدادات المنصة والعمليات</p>
+                    <p className="text-[#6b7280] mt-2">
+                      إدارة جميع إعدادات المنصة والعمليات
+                    </p>
                   </div>
                   {/* Commission Settings Section */}
                   <div className="adm-card adm-tint-yellow p-6">
@@ -1157,8 +1440,12 @@ export default function AdminDashboard() {
                         <Percent className="h-6 w-6" />
                       </div>
                       <div>
-                        <h3 className="text-xl font-bold text-[#1f2430]">إعدادات العمولة</h3>
-                        <p className="text-sm text-[#6b7280]">تحديد نسب العمولة للمنصة والسائقين</p>
+                        <h3 className="text-xl font-bold text-[#1f2430]">
+                          إعدادات العمولة
+                        </h3>
+                        <p className="text-sm text-[#6b7280]">
+                          تحديد نسب العمولة للمنصة والسائقين
+                        </p>
                       </div>
                     </div>
 
@@ -1196,6 +1483,6 @@ export default function AdminDashboard() {
           isLoading={isDeleting}
         />
       </div>
-    </ThemeProvider >
+    </ThemeProvider>
   );
 }
